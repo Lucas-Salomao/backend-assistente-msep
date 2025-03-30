@@ -1,0 +1,6 @@
+.venv
+.env
+*pycache*
+chatbot.json
+*.log*
+consolidated_code.txt
