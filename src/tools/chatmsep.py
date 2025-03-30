@@ -50,7 +50,7 @@ async def chatmsep(message: str) -> str:
         # Gera a resposta usando o modelo
         response = model_generico.generate_content(
             message,  # Usa a mensagem do usuário como prompt
-            tools=[tool_search],
+            # tools=[tool_search],
             generation_config=GenerationConfig(
                 temperature=0.1,
                 max_output_tokens=8192,
