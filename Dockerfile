@@ -11,13 +11,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia o resto do código da aplicação
-COPY . .
-
-# Define a variável de ambiente para a porta
-ENV PORT=8000
-
-# Expõe a porta 8000
-EXPOSE 8000
+COPY src/ ./src/
+COPY logs/ ./logs/
+COPY msep.md .
 
 # Comando para rodar a aplicação
 CMD ["python", "src/api.py"]
