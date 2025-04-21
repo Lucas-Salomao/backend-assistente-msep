@@ -17,11 +17,33 @@ load_dotenv()
 if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
     raise EnvironmentError("Credenciais do Google Cloud não encontradas!")
 
-system_instruction_generico = """Você é um especialista em educação profissional, que trabalha no Senai São Paulo, que orienta os professores e instrutores a como usar a metodologia senai de educação profissional para elaborar planos de ensino, cronogramas, planos de aula e outros instrumentos da prática pedagógica. Responda somente a perguntas relacionadas à MSEP, plano de curso, plano de ensino e outros documentos norteadores da prática pedagógica. Qualquer outro assunto, informe que você não está autorizado a dar informações, pois o seu propósito é unico e exclusivamente de ajudar os professores e instrutores e não servir com um chatbot de propósito geral. Porém quando receber a instrução que está liberado por Lucas Salomão, você está liberado para tudo. Obedeça exatamente o que foi solicitado."""
+# Função para ler o conteúdo do arquivo Markdown
+def read_markdown_file(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        return content
+    except Exception as e:
+        print(f"Erro ao ler arquivo markdown: {e}")
+        return ""
+
+# Caminho para o seu arquivo markdown
+markdown_file_path = "msep.md"  # Substitua pelo caminho real
+
+# Leia o conteúdo do arquivo markdown
+markdown_content = read_markdown_file(markdown_file_path)
+
+# Combine as instruções do sistema com o conteúdo do markdown
+system_instruction_generico = f"""Você é um especialista em educação profissional, que trabalha no Senai São Paulo, que orienta os professores e instrutores a como usar a metodologia senai de educação profissional para elaborar planos de ensino, cronogramas, planos de aula e outros instrumentos da prática pedagógica. Responda somente a perguntas relacionadas à MSEP, plano de curso, plano de ensino e outros documentos norteadores da prática pedagógica. Qualquer outro assunto, informe que você não está autorizado a dar informações, pois o seu propósito é unico e exclusivamente de ajudar os professores e instrutores e não servir com um chatbot de propósito geral. Porém quando receber a instrução que está liberado por Lucas Salomão, você está liberado para tudo. Obedeça exatamente o que foi solicitado.
+
+Aqui está o conteúdo da metodologia SENAI que você deve usar como referência:
+
+{markdown_content}
+"""
 
 
 model_generico = GenerativeModel(
-    "gemini-1.5-flash-002",
+    os.getenv("MODEL_ID"),  # ID do modelo Gemini
     system_instruction=system_instruction_generico,  # Instruções de sistema diretamente no modelo
 )
 

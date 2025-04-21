@@ -72,24 +72,14 @@ Retorne apenas o nome da ferramenta e mais nada.
 """)
 
 response_prompt = PromptTemplate.from_template("""
-Histórico: {messages}
-Pergunta: {input}
-Resultado da ferramenta (se aplicável): {tool_result}
-Endereço: {tool_endereco}
-Mapa: {tool_mapa}
-Responda de forma amigável e útil, gerando uma resposta natural e contextualizada para o usuário.
-Com base nisso, gere uma resposta natural e contextualizada para o usuário. 
-Se houver endereços, liste-os de forma clara. 
-Se houver um mapa HTML, inclua-o exatamente como fornecido, sem modificá-lo, para que o frontend possa renderizá-lo.
-Se a ferramenta for 'tutor', use o resultado diretamente como resposta.
+{tool_result}
+Retorne o resultado sem modificações.
 """)
 
 class AgentState(TypedDict):
     input: str
     user_id: str
     thread_id: str
-    latitude: str
-    longitude: str
     tool_call: str
     tool_result: str
     response: str
@@ -101,10 +91,6 @@ tool_executor = ToolExecutor(tools)
 # Mapeamento de argumentos para cada ferramenta
 TOOL_ARGUMENTS = {
     "web_search": {"message": "input"},
-    "futuro_digital": {"session_id": "user_id", "message": "input"},
-    "buscar_endereco": {"localidade": "input"},
-    "buscar_escolas_proximas": {"latitude": "latitude", "longitude": "longitude"},
-    "tutor": {"message": "input", "history": "messages"},
     "chatmsep": {"message": "input"}
 }
 
@@ -145,19 +131,12 @@ async def execute_tool(state: AgentState) -> AgentState:
 
 async def generate_response(state: AgentState) -> AgentState:
     logger.info("Gerando resposta final")
-    tool_endereco = "Nenhum endereço retornado"
-    tool_mapa = "Nenhum mapa disponível"
-    if state["tool_result"] and isinstance(state["tool_result"], dict):
-        tool_endereco = state["tool_result"].get("endereco", tool_endereco)
-        tool_map = state["tool_result"].get("mapa", tool_mapa)
-    elif state["tool_result"]:
-        tool_result = state["tool_result"]
-        
+    tool_result = state["tool_result"]
     prompt = response_prompt.format(
         messages="\n".join(state["messages"]),
         input=state["input"],
-        tool_endereco=tool_endereco,
-        tool_mapa=tool_mapa,
+        # tool_endereco=tool_endereco,
+        # tool_mapa=tool_mapa,
         tool_result=state["tool_result"] if state["tool_result"] else "Nenhum resultado de ferramenta",
     )
     state["response"] = (await llm.ainvoke(prompt)).content
@@ -189,7 +168,7 @@ async def initialize_agent():
     return agent
 
 # Função assíncrona para rodar o agente
-async def run_agent(input: str, user_id: str, thread_id: str, latitude: str, longitude: str) -> str:
+async def run_agent(input: str, user_id: str, thread_id: str) -> str:
     logger.info(f"Iniciando agente para user_id={user_id}, thread_id={thread_id}, input={input}")
     await initialize_agent()  # Inicializa o agente na primeira chamada
     config = {"configurable": {"thread_id": thread_id}}
@@ -202,8 +181,6 @@ async def run_agent(input: str, user_id: str, thread_id: str, latitude: str, lon
         "input": input,
         "user_id": user_id,
         "thread_id": thread_id,
-        "latitude": latitude,
-        "longitude": longitude,
         "tool_call": None,
         "tool_result": None,
         "response": None,
