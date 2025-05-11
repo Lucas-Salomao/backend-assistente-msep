@@ -8,7 +8,10 @@ from pydantic import BaseModel
 from agent import run_agent
 import os
 from dotenv import load_dotenv
-from models.models import RequestBody
+from models.models import RequestBody, PlanGenerationBody, PlanGenerationResponse, GetThreadsRequest, GetThreadsResponse, ChatHistoryRequest, MessageInfo, ChatHistoryResponse
+from psycopg import AsyncConnection  # Adiciona esta importação
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from agent import get_checkpoint_connection
 
 # Importa a middleware CORS <<<<<<----- ADICIONADO
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,12 +58,17 @@ app.add_middleware(
 async def process_message(body: RequestBody):
     try:
         logger.info("endpoint CHAT solicitado")
-        response = await run_agent(  # Await na chamada assíncrona
+        result = await run_agent(  # Await na chamada assíncrona
             input=body.message,
             user_id=body.userId,
             thread_id=body.threadId,
         )
-        return {"message": response, "user_id": body.userId, "thread_id": body.threadId}
+        return {
+            "message": result["response"], 
+            "title": result["title"],  # Adiciona o título
+            "user_id": body.userId, 
+            "thread_id": body.threadId
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -70,6 +78,69 @@ async def health_check():
         logger.info("Health check solicitado")
         return {"status": "servidor rodando"}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/get_threads/", response_model=GetThreadsResponse)
+async def get_threads(body: GetThreadsRequest):
+    try:
+        logger.info(f"Endpoint get_threads solicitado para user_id: {body.userId}")
+        async with await AsyncConnection.connect(
+            f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
+            autocommit=True
+        ) as conn:
+            async with conn.cursor() as cur:
+                query = """
+                SELECT DISTINCT thread_id 
+                FROM checkpoints 
+                WHERE (metadata->>'user_id') = %s
+                """
+                await cur.execute(query, (body.userId,))
+                thread_ids = [row[0] async for row in cur]
+        
+        return GetThreadsResponse(
+            userId=body.userId,
+            all_threads=thread_ids
+        )
+    except Exception as e:
+        logger.error(f"Erro ao recuperar threads: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat_history/", response_model=ChatHistoryResponse)
+async def get_chat_history(body: ChatHistoryRequest):
+    try:
+        logger.info(f"Endpoint chat_history solicitado para thread_id: {body.threadId}")
+        conn = await get_checkpoint_connection()
+        checkpointer = AsyncPostgresSaver(conn=conn)
+        
+        config = {"configurable": {"thread_id": body.threadId}}
+        checkpoint_tuple = await checkpointer.aget_tuple(config)
+        
+        if not checkpoint_tuple or 'messages' not in checkpoint_tuple.checkpoint['channel_values']:
+            return ChatHistoryResponse(threadId=body.threadId, messages=[],title=None)
+        
+        messages = checkpoint_tuple.checkpoint['channel_values']['messages']
+        title = checkpoint_tuple.checkpoint['channel_values'].get('title')
+        
+        extracted_messages = [
+            MessageInfo(
+                type=type(msg).__name__,
+                content=msg if isinstance(msg, str) else msg.content,
+                additional_info={
+                    "id": getattr(msg, 'id', None),
+                    **({"tool_calls": msg.tool_calls} if hasattr(msg, 'tool_calls') else {}),
+                    **({"tool_call_id": msg.tool_call_id} if hasattr(msg, 'tool_call_id') else {})
+                }
+            ) for msg in messages
+        ]
+        
+        await conn.close()
+        return ChatHistoryResponse(
+            threadId=body.threadId,
+            messages=extracted_messages,
+            title=title
+        )
+    except Exception as e:
+        logger.error(f"Erro ao recuperar histórico de chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
  
 if __name__ == "__main__":

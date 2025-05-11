@@ -76,6 +76,16 @@ response_prompt = PromptTemplate.from_template("""
 Retorne o resultado sem modificações.
 """)
 
+title_prompt = PromptTemplate.from_template("""
+Com base no input do usuário e na resposta do sistema, gere um título curto e descritivo para esta conversa.
+O título deve ser conciso (no máximo 7 palavras) e capturar a essência do assunto discutido.
+
+Input do usuário: {input}
+Resposta do sistema: {response}
+
+Título do da conversa
+""")
+
 class AgentState(TypedDict):
     input: str
     user_id: str
@@ -83,6 +93,7 @@ class AgentState(TypedDict):
     tool_call: str
     tool_result: str
     response: str
+    title: str  # Campo para armazenar o título da conversa
     messages: Annotated[list[str], "Mensagens acumuladas da conversa"]
     
 tool_map = {tool.name if hasattr(tool, 'name') else tool.__name__: tool for tool in tools}
@@ -144,15 +155,44 @@ async def generate_response(state: AgentState) -> AgentState:
     logger.info(f"Resposta gerada: {state['response']}")
     return state
 
+async def generate_title(state: AgentState) -> AgentState:
+    """Gera um título para a conversa baseado no input do usuário e na resposta."""
+    # Se já tiver um título, mantém o mesmo
+    if state.get("title"):
+        logger.info(f"Mantendo título existente: {state['title']}")
+        return state
+        
+    # Gera um novo título se tivermos input e resposta
+    if state["input"] and state["response"]:
+        logger.info("Gerando título para a conversa")
+        prompt = title_prompt.format(
+            input=state["input"],
+            response=state["response"]
+        )
+        
+        try:
+            state["title"] = (await llm.ainvoke(prompt)).content.strip()
+            logger.info(f"Título gerado: {state['title']}")
+        except Exception as e:
+            logger.error(f"Erro ao gerar título: {str(e)}")
+            state["title"] = "Nova Conversa"  # Título padrão em caso de falha
+    else:
+        logger.info("Definindo título padrão 'Nova Conversa'")
+        state["title"] = "Nova Conversa"  # Título padrão
+        
+    return state
+
 # Construção do grafo
 workflow = StateGraph(AgentState)
 workflow.add_node("identify_tool", identify_tool)
 workflow.add_node("execute_tool", execute_tool)
 workflow.add_node("generate_response", generate_response)
+workflow.add_node("generate_title", generate_title)  # Adiciona o novo nó
 workflow.set_entry_point("identify_tool")
 workflow.add_edge("identify_tool", "execute_tool")
 workflow.add_edge("execute_tool", "generate_response")
-workflow.add_edge("generate_response", END)
+workflow.add_edge("generate_response", "generate_title")  # Modifica o fluxo
+workflow.add_edge("generate_title", END) # Finaliza após gerar o título
 
 # Compila o grafo com checkpointer
 # agent = workflow.compile(checkpointer=checkpointer)
@@ -168,14 +208,25 @@ async def initialize_agent():
     return agent
 
 # Função assíncrona para rodar o agente
-async def run_agent(input: str, user_id: str, thread_id: str) -> str:
+async def run_agent(input: str, user_id: str, thread_id: str) -> dict:
     logger.info(f"Iniciando agente para user_id={user_id}, thread_id={thread_id}, input={input}")
     await initialize_agent()  # Inicializa o agente na primeira chamada
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {"configurable": {"thread_id": thread_id},
+              "metadata": {"user_id": user_id}}
     
     # Recupera o estado anterior do checkpoint, se existir
     previous_state = await agent.aget_state(config)
-    initial_messages = previous_state.values.get("messages", []) if previous_state else []
+    
+    # Obtém as mensagens anteriores se existirem
+    initial_messages = []
+    if previous_state and "messages" in previous_state.values:
+        initial_messages = previous_state.values["messages"]
+    
+    # Obtém o título anterior se existir
+    title = None
+    if previous_state and "title" in previous_state.values:
+        title = previous_state.values["title"]
+        logger.info(f"Título recuperado do estado anterior: {title}")
     
     initial_state = {
         "input": input,
@@ -184,8 +235,13 @@ async def run_agent(input: str, user_id: str, thread_id: str) -> str:
         "tool_call": None,
         "tool_result": None,
         "response": None,
-        "messages": []
+        "title": title,  # Pode ser None para novas conversas
+        "messages": initial_messages
     }
     result = await agent.ainvoke(initial_state, config=config)  # Chamada assíncrona do grafo
     logger.info(f"Agente concluído com resposta: {result['response']}")
-    return result["response"]
+    logger.info(f"Título da conversa: {result['title']}")
+    return {
+        "response": result["response"],
+        "title": result["title"]
+    }
