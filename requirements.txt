@@ -17,3 +17,4 @@ langgraph-checkpoint-postgres==2.0.3
 python-jose==3.3.0
 uuid==1.30
 tempfile2==0.1.2
+python-multipart==0.0.20

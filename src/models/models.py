@@ -44,3 +44,18 @@ class ChatHistoryResponse(BaseModel):
     threadId: str
     messages: List[MessageInfo]
     title: Optional[str] = None  # Adiciona o campo title como opcional
+    
+class ThreadInfo(BaseModel):
+    thread_id: str
+    title: str | None
+
+class GetThreadsWithTitlesRequest(BaseModel):
+    userId: str
+
+class GetThreadsWithTitlesResponse(BaseModel):
+    userId: str
+    threads: List[ThreadInfo]
+    
+class ModelConfigRequest(BaseModel):
+    temperature: float = Field(..., ge=0.0, le=2.0)  # Entre 0.0 e 1.0
+    top_p: float = Field(..., ge=0.0, le=1.0)       # Entre 0.0 e 1.0

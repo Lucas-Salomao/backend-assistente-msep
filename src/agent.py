@@ -34,15 +34,39 @@ if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
 
 vertexai.init(project=os.getenv("PROJECT_ID"), location=os.getenv("LOCATION", "us-central1"))
 
-# Configuração do Gemini via Vertex AI (assíncrono)
-llm = ChatVertexAI(
-    model_name="gemini-2.0-flash-001",
-    project=os.getenv("PROJECT_ID"),
-    location=os.getenv("LOCATION", "us-central1"),
-    temperature=0.7,
-    max_output_tokens=8192
-)
-logger.info(f"LLM inicializado: {llm is not None}")
+# Função para recuperar configurações do usuário
+async def get_user_config(user_id: str):
+    try:
+        async with await AsyncConnection.connect(STRING_POSTGRES, autocommit=True) as conn:
+            async with conn.cursor() as cur:
+                query = """
+                SELECT temperature, top_p 
+                FROM user_configs 
+                WHERE user_id = %s
+                """
+                await cur.execute(query, (user_id,))
+                result = await cur.fetchone()
+                if result:
+                    return {"temperature": result[0], "top_p": result[1]}
+                # Retorna valores padrão se não houver configuração
+                return {"temperature": 0.7, "top_p": 1.0}
+    except Exception as e:
+        logger.error(f"Erro ao recuperar configuração do usuário {user_id}: {str(e)}")
+        return {"temperature": 0.7, "top_p": 1.0}
+
+# Configuração inicial do Gemini via Vertex AI (não mais global)
+# llm será criado por requisição
+
+async def get_llm(user_id: str):
+    config = await get_user_config(user_id)
+    return ChatVertexAI(
+        model_name="gemini-2.0-flash-001",
+        project=os.getenv("PROJECT_ID"),
+        location=os.getenv("LOCATION", "us-central1"),
+        temperature=config["temperature"],
+        top_p=config["top_p"],
+        max_output_tokens=8192
+    )
 
 # Configuração do checkpointer com asyncpg
 async def get_checkpoint_connection():
@@ -108,6 +132,7 @@ TOOL_ARGUMENTS = {
 async def identify_tool(state: AgentState) -> AgentState:
     logger.info(f"Identificando ferramenta para input: {state['input']}")
     prompt = tool_prompt.format(input=state["input"])
+    llm = await get_llm(state["user_id"])
     tool_call = (await llm.ainvoke(prompt)).content.strip()  # Chamada assíncrona ao LLM
     state["tool_call"] = tool_call if tool_call != "none" else None
     logger.info(f"Ferramenta identificada: {state['tool_call']}")
@@ -142,6 +167,7 @@ async def execute_tool(state: AgentState) -> AgentState:
 
 async def generate_response(state: AgentState) -> AgentState:
     logger.info("Gerando resposta final")
+    llm = await get_llm(state["user_id"])
     tool_result = state["tool_result"]
     prompt = response_prompt.format(
         messages="\n".join(state["messages"]),
@@ -171,6 +197,7 @@ async def generate_title(state: AgentState) -> AgentState:
         )
         
         try:
+            llm = await get_llm(state["user_id"])
             state["title"] = (await llm.ainvoke(prompt)).content.strip()
             logger.info(f"Título gerado: {state['title']}")
         except Exception as e:

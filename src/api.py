@@ -2,13 +2,13 @@ import logging
 import platform
 import asyncio
 from asyncio import WindowsSelectorEventLoopPolicy
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Form
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from agent import run_agent
 import os
 from dotenv import load_dotenv
-from models.models import RequestBody, PlanGenerationBody, PlanGenerationResponse, GetThreadsRequest, GetThreadsResponse, ChatHistoryRequest, MessageInfo, ChatHistoryResponse
+from models.models import RequestBody, PlanGenerationBody, PlanGenerationResponse, GetThreadsRequest, GetThreadsResponse, ChatHistoryRequest, MessageInfo, ChatHistoryResponse, ThreadInfo, GetThreadsWithTitlesRequest, GetThreadsWithTitlesResponse, ModelConfigRequest
 from psycopg import AsyncConnection  # Adiciona esta importação
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from agent import get_checkpoint_connection
@@ -141,6 +141,101 @@ async def get_chat_history(body: ChatHistoryRequest):
         )
     except Exception as e:
         logger.error(f"Erro ao recuperar histórico de chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/get_threads_with_titles/", response_model=GetThreadsWithTitlesResponse)
+async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
+    try:
+        logger.info(f"Endpoint get_threads_with_titles solicitado para user_id: {body.userId}")
+        async with await AsyncConnection.connect(
+            f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
+            autocommit=True
+        ) as conn:
+            async with conn.cursor() as cur:
+                query = """
+                SELECT thread_id, (metadata->'writes'->'generate_title'->>'title') AS title
+                FROM (
+                    SELECT thread_id, metadata,
+                           ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY (metadata->>'step')::int DESC) AS rn
+                    FROM checkpoints
+                    WHERE (metadata->>'user_id') = %s
+                ) t
+                WHERE rn = 1;
+                """
+                await cur.execute(query, (body.userId,))
+                threads = [
+                    ThreadInfo(thread_id=row[0], title=row[1])
+                    async for row in cur
+                ]
+        
+        return GetThreadsWithTitlesResponse(
+            userId=body.userId,
+            threads=threads
+        )
+    except Exception as e:
+        logger.error(f"Erro ao recuperar threads com títulos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/delete_thread/{thread_id}")
+async def delete_thread(thread_id: str, user_id: str = Form(...)):
+    try:
+        logger.info(f"Endpoint delete_thread solicitado para thread_id: {thread_id} e user_id: {user_id}")
+        async with await AsyncConnection.connect(
+            f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
+            autocommit=True
+        ) as conn:
+            async with conn.cursor() as cur:
+                # Verifica se o thread_id pertence ao user_id
+                query_check = """
+                SELECT EXISTS (
+                    SELECT 1 FROM checkpoints 
+                    WHERE thread_id = %s AND (metadata->>'user_id') = %s
+                )
+                """
+                await cur.execute(query_check, (thread_id, user_id))
+                exists = await cur.fetchone()
+                if not exists[0]:
+                    raise HTTPException(status_code=404, detail="Thread not found for this user")
+
+                # Exclui o thread
+                query_delete = """
+                DELETE FROM checkpoints 
+                WHERE thread_id = %s AND (metadata->>'user_id') = %s
+                """
+                await cur.execute(query_delete, (thread_id, user_id))
+                await conn.commit()
+
+        return {"message": "Thread deleted successfully", "thread_id": thread_id}
+    except Exception as e:
+        logger.error(f"Erro ao excluir thread: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/configure_model/")
+async def configure_model(config: ModelConfigRequest, user_id: str = Form(...)):
+    try:
+        logger.info(f"Endpoint configure_model solicitado para user_id: {user_id}, temperature={config.temperature}, top_p={config.top_p}")
+        async with await AsyncConnection.connect(
+            f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
+            autocommit=True
+        ) as conn:
+            async with conn.cursor() as cur:
+                query = """
+                INSERT INTO user_configs (user_id, temperature, top_p)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE
+                SET temperature = EXCLUDED.temperature,
+                    top_p = EXCLUDED.top_p,
+                    updated_at = CURRENT_TIMESTAMP
+                """
+                await cur.execute(query, (user_id, config.temperature, config.top_p))
+        return {
+            "message": "Model configuration updated successfully for user",
+            "user_id": user_id,
+            "temperature": config.temperature,
+            "top_p": config.top_p
+        }
+    except Exception as e:
+        logger.error(f"Erro ao configurar modelo para user_id {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
  
 if __name__ == "__main__":
