@@ -89,6 +89,35 @@ async def setup_checkpointer():
     except Exception as e:
         logger.error(f"Erro ao configurar o checkpointer: {e}")
         raise
+    
+async def create_user_configs_table(conn):
+    """Cria a tabela user_configs se ela não existir."""
+    try:
+        async with conn.cursor() as cur:
+            query = """
+            CREATE TABLE IF NOT EXISTS user_configs (
+                user_id VARCHAR(255) PRIMARY KEY,
+                temperature FLOAT NOT NULL DEFAULT 0.7,
+                top_p FLOAT NOT NULL DEFAULT 1.0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+            await cur.execute(query)
+            logger.info("Tabela user_configs verificada/criada com sucesso")
+    except Exception as e:
+        logger.error(f"Erro ao criar/verificar tabela user_configs: {e}")
+        raise
+    
+async def setup_tables():
+    """Cria a tabela necessária para o user_configs, se não existir."""
+    try:
+        conn = await get_checkpoint_connection()
+        await create_user_configs_table(conn)  # Cria a tabela user_configs
+        logger.info("Tabela do user_configs criada ou verificada com sucesso")
+        await conn.close()
+    except Exception as e:
+        logger.error(f"Erro ao configurar o user_configs: {e}")
+        raise
 
 tool_prompt = PromptTemplate.from_template("""
 retorne sempre "chatmsep" como ferramenta padrão, a menos que o usuário solicite especificamente outra ferramenta.
