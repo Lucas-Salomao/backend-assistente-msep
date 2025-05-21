@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from models.models import RequestBody, PlanGenerationBody, PlanGenerationResponse, GetThreadsRequest, GetThreadsResponse, ChatHistoryRequest, MessageInfo, ChatHistoryResponse, ThreadInfo, GetThreadsWithTitlesRequest, GetThreadsWithTitlesResponse, ModelConfigRequest
 from psycopg import AsyncConnection  # Adiciona esta importação
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from agent import get_checkpoint_connection
+from agent import get_checkpoint_connection, setup_tables
 
 # Importa a middleware CORS <<<<<<----- ADICIONADO
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,7 +54,12 @@ app.add_middleware(
 )
 # --- FIM DA CONFIGURAÇÃO DO CORS ---
 
-@app.post("/chat/", response_model=dict)
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Inicializando o backend...")
+    await setup_tables()
+
+@app.post("/chat", response_model=dict)
 async def process_message(body: RequestBody):
     try:
         logger.info("endpoint CHAT solicitado")
@@ -72,7 +77,7 @@ async def process_message(body: RequestBody):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.get("/health/", response_model=dict)
+@app.get("/health", response_model=dict)
 async def health_check():
     try:
         logger.info("Health check solicitado")
@@ -80,7 +85,7 @@ async def health_check():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/get_threads/", response_model=GetThreadsResponse)
+@app.post("/get_threads", response_model=GetThreadsResponse)
 async def get_threads(body: GetThreadsRequest):
     try:
         logger.info(f"Endpoint get_threads solicitado para user_id: {body.userId}")
@@ -105,7 +110,7 @@ async def get_threads(body: GetThreadsRequest):
         logger.error(f"Erro ao recuperar threads: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/chat_history/", response_model=ChatHistoryResponse)
+@app.post("/chat_history", response_model=ChatHistoryResponse)
 async def get_chat_history(body: ChatHistoryRequest):
     try:
         logger.info(f"Endpoint chat_history solicitado para thread_id: {body.threadId}")
@@ -143,7 +148,7 @@ async def get_chat_history(body: ChatHistoryRequest):
         logger.error(f"Erro ao recuperar histórico de chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/get_threads_with_titles/", response_model=GetThreadsWithTitlesResponse)
+@app.post("/get_threads_with_titles", response_model=GetThreadsWithTitlesResponse)
 async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
     try:
         logger.info(f"Endpoint get_threads_with_titles solicitado para user_id: {body.userId}")
@@ -176,7 +181,7 @@ async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
         logger.error(f"Erro ao recuperar threads com títulos: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/delete_thread/{thread_id}")
+@app.delete("/delete_thread{thread_id}")
 async def delete_thread(thread_id: str, user_id: str = Form(...)):
     try:
         logger.info(f"Endpoint delete_thread solicitado para thread_id: {thread_id} e user_id: {user_id}")
@@ -210,10 +215,12 @@ async def delete_thread(thread_id: str, user_id: str = Form(...)):
         logger.error(f"Erro ao excluir thread: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/configure_model/")
-async def configure_model(config: ModelConfigRequest, user_id: str = Form(...)):
+@app.post("/configure_model")
+async def configure_model(config: ModelConfigRequest):
     try:
-        logger.info(f"Endpoint configure_model solicitado para user_id: {user_id}, temperature={config.temperature}, top_p={config.top_p}")
+        logger.info(f"Endpoint configure_model solicitado para user_id: {config.user_id}, temperature={config.temperature}, top_p={config.top_p}")
+        
+        # Atualiza o banco de dados
         async with await AsyncConnection.connect(
             f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
             autocommit=True
@@ -227,15 +234,18 @@ async def configure_model(config: ModelConfigRequest, user_id: str = Form(...)):
                     top_p = EXCLUDED.top_p,
                     updated_at = CURRENT_TIMESTAMP
                 """
-                await cur.execute(query, (user_id, config.temperature, config.top_p))
+                await cur.execute(query, (config.user_id, config.temperature, config.top_p))
+
         return {
             "message": "Model configuration updated successfully for user",
-            "user_id": user_id,
+            "user_id": config.user_id,
             "temperature": config.temperature,
             "top_p": config.top_p
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Erro ao configurar modelo para user_id {user_id}: {str(e)}")
+        logger.error(f"Erro ao configurar modelo para user_id {config.user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
  
 if __name__ == "__main__":
