@@ -59,3 +59,4 @@ class GetThreadsWithTitlesResponse(BaseModel):
 class ModelConfigRequest(BaseModel):
     temperature: float = Field(..., ge=0.0, le=2.0)  # Entre 0.0 e 1.0
     top_p: float = Field(..., ge=0.0, le=1.0)       # Entre 0.0 e 1.0
+    user_id: str
