@@ -1,23 +1,34 @@
 import logging
 import platform
 import asyncio
-from asyncio import WindowsSelectorEventLoopPolicy
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Form
+from typing import Optional, Optional, List, Dict, Any
+from fastapi import FastAPI, File, HTTPException, Request, BackgroundTasks, Form, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from agent import run_agent
 import os
 from dotenv import load_dotenv
-from models.models import RequestBody, PlanGenerationBody, PlanGenerationResponse, GetThreadsRequest, GetThreadsResponse, ChatHistoryRequest, MessageInfo, ChatHistoryResponse, ThreadInfo, GetThreadsWithTitlesRequest, GetThreadsWithTitlesResponse, ModelConfigRequest
 from psycopg import AsyncConnection  # Adiciona esta importação
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from agent import get_checkpoint_connection, setup_tables
+from .agent import run_agent, get_checkpoint_connection, setup_tables, setup_checkpointer
+from .document_store import setup_document_storage, store_markdown_document
+from .pdf_processor import convert_pdf_to_markdown
+import json # Para carregar strings JSON
+import uuid # Para gerar IDs
+from .models.models import (
+    RequestBody,
+    GetThreadsRequest, GetThreadsResponse,
+    ChatHistoryRequest, MessageInfo, ChatHistoryResponse,
+    ThreadInfo, GetThreadsWithTitlesRequest, GetThreadsWithTitlesResponse,
+    ModelConfigRequest,
+    FullPlanDetailsResponse, # Nosso modelo de resposta para extração
+    PlanGenerationBodyWithStoredId, PlanGenerationResponse # Para geração do plano
+)
 
 # Importa a middleware CORS <<<<<<----- ADICIONADO
 from fastapi.middleware.cors import CORSMiddleware
 
 # Configuração específica para Windows
 if platform.system() == 'Windows':
+    from asyncio import WindowsSelectorEventLoopPolicy
     asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 # Configuração do logging
@@ -57,7 +68,10 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Inicializando o backend...")
+    await setup_checkpointer()
     await setup_tables()
+    await setup_document_storage()
+    logger.info("Eventos de startup concluídos.")
 
 @app.post("/chat", response_model=dict)
 async def process_message(body: RequestBody):
@@ -247,6 +261,142 @@ async def configure_model(config: ModelConfigRequest):
     except Exception as e:
         logger.error(f"Erro ao configurar modelo para user_id {config.user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/pdf/extract_full_details", response_model=FullPlanDetailsResponse)
+async def pdf_extract_full_plan_details(
+    file: UploadFile = File(..., description="Arquivo PDF do plano de curso completo."),
+    user_id: str = Form(..., description="ID do usuário."),
+    thread_id: str = Form(..., description="ID da conversa/sessão original para associar o documento."),
+    original_pdf_filename: Optional[str] = Form(None, description="Nome original do arquivo PDF (opcional).")
+):
+    operation_description = "extract_full_plan_details"
+    effective_filename = original_pdf_filename or file.filename or "unknown.pdf"
+    logger.info(f"Endpoint /{operation_description} chamado por user: {user_id}, thread_orig: {thread_id}, file: {effective_filename}")
+    
+    if not file.content_type == "application/pdf":
+        raise HTTPException(status_code=400, detail="Tipo de arquivo inválido. Apenas PDF é aceito.")
+
+    try:
+        markdown_content = await convert_pdf_to_markdown(file)
+        
+        # Armazena o documento e associa ao user_id e thread_id originais
+        stored_doc_id = await store_markdown_document(
+            user_id=user_id,
+            thread_id=thread_id, # Associa o documento armazenado ao thread_id da conversa principal
+            markdown_content=markdown_content,
+            original_pdf_filename=effective_filename
+        )
+        logger.info(f"Markdown para '{effective_filename}' ({operation_description}) armazenado com ID: {stored_doc_id}")
+
+        # Cria um thread_id único para a operação do agente LangGraph (não polui o histórico da conversa principal)
+        agent_operation_thread_id = f"op_{operation_description}_{uuid.uuid4().hex[:12]}"
+
+        agent_initial_payload = {
+            "user_id": user_id, # Para config do LLM do agente
+            "thread_id": agent_operation_thread_id,
+            "pdf_markdown_content": markdown_content, # Conteúdo para a ferramenta de extração
+            "messages": [] # Operação discreta, sem histórico de chat prévio
+        }
+        
+        agent_result_dict = await run_agent(
+            input_command_or_message=f"CMD_EXTRACT_FULL_PLAN_DETAILS:{effective_filename}", # Comando gatilho
+            user_id=user_id, # Passa user_id para run_agent
+            thread_id=agent_operation_thread_id, # Thread específico da operação
+            initial_payload=agent_initial_payload # Passa dados pré-processados
+        )
+        
+        full_details_json_str = agent_result_dict.get("response")
+        if not full_details_json_str:
+            logger.error(f"Agente não retornou resposta para {operation_description} (file: {effective_filename})")
+            raise HTTPException(status_code=500, detail="Agente não retornou os detalhes completos do plano extraído.")
+        
+        extracted_details = json.loads(full_details_json_str)
+        if "error" in extracted_details:
+            error_detail = extracted_details.get('details', extracted_details.get('error', 'Erro desconhecido da ferramenta'))
+            logger.error(f"Erro da ferramenta {operation_description} (file: {effective_filename}): {error_detail}")
+            raise HTTPException(status_code=500, detail=f"Falha na extração dos detalhes: {error_detail}")
+
+        return FullPlanDetailsResponse(
+            stored_markdown_id=stored_doc_id,
+            user_id=user_id,
+            thread_id=thread_id, # Retorna o thread_id da conversa original
+            original_pdf_filename=effective_filename,
+            nomeCurso=extracted_details.get("nomeCurso"),
+            unidadesCurriculares=extracted_details.get("unidadesCurriculares", [])
+        )
+
+    except HTTPException as he:
+        # Log e re-raise HTTPExceptions
+        logger.error(f"HTTPException no endpoint {operation_description} (file: {effective_filename}): {he.detail}", exc_info=not isinstance(he.detail, str) or "File not found" not in he.detail) # Evita stacktrace para file not found comum
+        raise he
+    except ValueError as ve: # Ex: GCS bucket não configurado no document_store
+        logger.error(f"ValueError no endpoint {operation_description} (file: {effective_filename}): {str(ve)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(ve)) # Pode ser um erro de configuração
+    except Exception as e:
+        logger.error(f"Erro inesperado em /{operation_description} (file: {effective_filename}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno ao processar PDF para detalhes completos: {str(e)}")
+
+@app.post("/teaching_plan/generate", response_model=PlanGenerationResponse)
+async def generate_teaching_plan( # Nome do endpoint corrigido
+    body: PlanGenerationBodyWithStoredId # Usa o modelo de corpo de requisição atualizado
+):
+    operation_description = "generate_teaching_plan"
+    logger.info(f"Endpoint /{operation_description} chamado para stored_id: {body.stored_markdown_id} por user: {body.user_id}, thread_orig: {body.thread_id}")
+
+    # Cria um thread_id único para a operação do agente LangGraph
+    agent_interaction_thread_id = body.thread_id
+
+    # Preparar o payload inicial para o agente
+    agent_initial_payload = {
+        "user_id": body.user_id,
+        "thread_id": agent_interaction_thread_id,
+        "stored_markdown_id": body.stored_markdown_id,
+        "plan_docente": body.docente,
+        "plan_unidade_operacional": body.escola, # Mapeamento de 'escola' para 'unidade_operacional'
+        "plan_nome_curso": body.curso,           # Mapeamento de 'curso' para 'plan_nome_curso'
+        "plan_nome_uc": body.uc,               # Mapeamento de 'uc' para 'plan_nome_uc'
+        "plan_capacidades_tecnicas": body.extracted_capacidades_tecnicas or [],
+        "plan_capacidades_socioemocionais": body.extracted_capacidades_socioemocionais or [],
+        "plan_estrategia": body.estrategia, # Garanta que o nome do campo está correto no Pydantic (era estraategia)
+        "plan_tematica": body.tematica,
+        "messages": [] # Operação discreta, sem histórico de chat prévio
+        # Se a ferramenta generate_teaching_plan precisar de extracted_course_name e extracted_ucs_list explicitamente:
+        # "plan_extracted_data": {
+        #     "nomeCurso": body.extracted_course_name,
+        #     "UCs_list": body.extracted_ucs_list
+        # }
+    }
+    
+    try:
+        agent_result_dict = await run_agent(
+            input_command_or_message=f"CMD_GENERATE_TEACHING_PLAN:doc_id={body.stored_markdown_id}", # Comando gatilho
+            user_id=body.user_id,
+            thread_id=agent_interaction_thread_id,
+            initial_payload=agent_initial_payload
+        )
+
+        plan_markdown_json_str = agent_result_dict.get("response")
+        if not plan_markdown_json_str:
+            logger.error(f"Agente não retornou resposta para {operation_description} (stored_id: {body.stored_markdown_id})")
+            raise HTTPException(status_code=500, detail="Agente não retornou o plano de ensino gerado.")
+            
+        plan_data = json.loads(plan_markdown_json_str)
+        if "error" in plan_data:
+            error_detail = plan_data.get('details', plan_data.get('error', 'Erro desconhecido da ferramenta'))
+            logger.error(f"Erro da ferramenta {operation_description} (stored_id: {body.stored_markdown_id}): {error_detail}")
+            raise HTTPException(status_code=500, detail=f"Falha na geração do plano: {error_detail}")
+
+        return PlanGenerationResponse(
+            userId=body.user_id,
+            threadId=body.thread_id, # Retorna o thread_id da conversa original associada
+            plan_markdown=plan_data.get("plan_markdown", "Erro: Plano não gerado ou markdown ausente na resposta.")
+        )
+    except HTTPException as he:
+        logger.error(f"HTTPException no endpoint {operation_description} (stored_id: {body.stored_markdown_id}): {he.detail}", exc_info= not isinstance(he.detail, str) or "File not found" not in he.detail)
+        raise he
+    except Exception as e:
+        logger.error(f"Erro inesperado em /{operation_description} (stored_id: {body.stored_markdown_id}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar plano de ensino: {str(e)}")
  
 if __name__ == "__main__":
     import uvicorn
