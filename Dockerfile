@@ -16,4 +16,4 @@ COPY logs/ ./logs/
 COPY msep.md .
 
 # Comando para rodar a aplicação
-CMD ["python", "src/api.py"]
+CMD ["python", "uvicorn src.api:app --reload"]
