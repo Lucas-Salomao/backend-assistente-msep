@@ -2,9 +2,9 @@ import os
 import logging
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
-from typing import TypedDict, Annotated
+from typing import TypedDict, Annotated, Optional, List, Dict, Any
 from langgraph.prebuilt import ToolExecutor
-from tools import tools
+from src.tools import tools
 from langchain_google_vertexai import ChatVertexAI
 from google.cloud import aiplatform
 from langchain_core.prompts import PromptTemplate
@@ -149,22 +149,87 @@ class AgentState(TypedDict):
     title: str  # Campo para armazenar o título da conversa
     messages: Annotated[list[str], "Mensagens acumuladas da conversa"]
     
+    # Campos para processamento de PDF e Geração de Plano
+    # Para extração inicial (a ferramenta recebe o markdown diretamente)
+    pdf_markdown_content: Optional[str]
+
+    # Para geração do plano (a ferramenta recebe o ID e busca o markdown)
+    stored_markdown_id: Optional[str]
+    plan_docente: Optional[str]
+    plan_unidade_operacional: Optional[str]
+    plan_nome_curso: Optional[str] # Pode vir do input do usuário ou da extração anterior
+    plan_nome_uc: Optional[str]     # Pode vir do input do usuário ou da extração anterior
+    plan_capacidades_tecnicas: Optional[List[str]]
+    plan_capacidades_socioemocionais: Optional[List[str]]
+    plan_estrategia: Optional[str]
+    plan_tematica: Optional[str]
+    # Outros dados extraídos que podem ser úteis para a ferramenta de geração do plano
+    plan_extracted_data: Optional[Dict[str, Any]]
+    
 tool_map = {tool.name if hasattr(tool, 'name') else tool.__name__: tool for tool in tools}
 tool_executor = ToolExecutor(tools)
 
 # Mapeamento de argumentos para cada ferramenta
 TOOL_ARGUMENTS = {
-    "web_search": {"message": "input"},
-    "chatmsep": {"message": "input"}
+    "chatmsep": {"message": "input"},
+    # "web_search": {"message": "input"}, # Se estiver usando
+    "extract_full_plan_details": {
+        "markdown_content": "pdf_markdown_content" # Vem do AgentState
+    },
+    "generate_teaching_plan": {
+        "stored_markdown_id": "stored_markdown_id",
+        "docente": "plan_docente",
+        "unidade_operacional": "plan_unidade_operacional",
+        "nome_curso": "plan_nome_curso",
+        "nome_uc": "plan_nome_uc",
+        "capacidades_tecnicas": "plan_capacidades_tecnicas",
+        "capacidades_socioemocionais": "plan_capacidades_socioemocionais",
+        "estrategia": "plan_estrategia",
+        "tematica": "plan_tematica"
+        # "extracted_initial_data": "plan_extracted_data" # Se passar como um dict
+    }
 }
 
 async def identify_tool(state: AgentState) -> AgentState:
-    logger.info(f"Identificando ferramenta para input: {state['input']}")
-    prompt = tool_prompt.format(input=state["input"])
-    llm = await get_llm(state["user_id"])
-    tool_call = (await llm.ainvoke(prompt)).content.strip()  # Chamada assíncrona ao LLM
-    state["tool_call"] = tool_call if tool_call != "none" else None
-    logger.info(f"Ferramenta identificada: {state['tool_call']}")
+    user_input = state["input"]
+    logger.info(f"Identificando ferramenta para input (comando): {user_input[:100]}...")
+    
+    current_messages = state.get("messages", []) # Preserva histórico de chat
+    update_payload = {
+        "tool_call": None, 
+        "tool_result": None,
+        "messages": current_messages
+    } # Não resete outros campos do estado aqui
+
+    if user_input.startswith("CMD_EXTRACT_FULL_PLAN_DETAILS:"): # NOVO COMANDO
+        update_payload["tool_call"] = "extract_full_plan_details" # Nome da nova ferramenta
+        # pdf_markdown_content é preenchido pelo endpoint no initial_payload
+        logger.info(f"Comando direto para ferramenta de extração completa: {update_payload['tool_call']}")
+
+    elif user_input.startswith("CMD_GENERATE_TEACHING_PLAN:"):
+        update_payload["tool_call"] = "generate_teaching_plan" # Nome da nova ferramenta
+        # Os campos stored_markdown_id, plan_docente, etc.
+        # são preenchidos no AgentState pelo endpoint da API ANTES de chamar run_agent.
+        logger.info(f"Comando direto para ferramenta de Geração de Plano: {update_payload['tool_call']}")
+    else: # Lógica de chat normal (como antes)
+        logger.info("Nenhum comando PDF/Plano direto, usando LLM para chat/busca.")
+        prompt = tool_prompt.format(input=user_input)
+        try:
+            llm_for_tool_choice = await get_llm(state["user_id"])
+            tool_choice_response = await llm_for_tool_choice.ainvoke(prompt)
+            identified_tool = tool_choice_response.content.strip()
+            
+            if identified_tool and identified_tool.lower() != "none" and identified_tool in tool_map:
+                update_payload["tool_call"] = identified_tool
+            else:
+                update_payload["tool_call"] = "chatmsep" 
+            logger.info(f"LLM escolheu/default para chat: {update_payload['tool_call']}")
+        except Exception as e:
+            logger.error(f"Erro ao invocar LLM para identificação de ferramenta de chat: {e}", exc_info=True)
+            update_payload["tool_result"] = json.dumps({"error": f"Erro ao identificar ferramenta de chat: {str(e)}"})
+            # tool_call continua None, ou poderia default para chatmsep mesmo em erro
+
+    state.update(update_payload)
     return state
 
 async def execute_tool(state: AgentState) -> AgentState:
