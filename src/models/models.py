@@ -6,18 +6,18 @@ class RequestBody(BaseModel):
     userId: str
     threadId: str
        
-class PlanGenerationBody(BaseModel):
-    userId: str
-    threadId: str
-    docente: str
-    escola: str
-    planoCurso: str
-    curso: str
-    uc: str
-    capacidadesTecnicas: Optional[List[str]] = Field(default_factory=list)
-    capacidadesSocioemocionais: Optional[List[str]] = Field(default_factory=list)
-    estrategia: str
-    tematica: Optional[str] = ""
+# class PlanGenerationBody(BaseModel):
+#     userId: str
+#     threadId: str
+#     docente: str
+#     escola: str
+#     planoCurso: str
+#     curso: str
+#     uc: str
+#     capacidadesTecnicas: Optional[List[str]] = Field(default_factory=list)
+#     capacidadesSocioemocionais: Optional[List[str]] = Field(default_factory=list)
+#     estrategia: str
+#     tematica: Optional[str] = ""
 
 class PlanGenerationResponse(BaseModel):
     userId: str
@@ -82,6 +82,12 @@ class HorarioAula(BaseModel): # Novo modelo para representar os horários
     horaInicio: str
     horaFim: str
     
+class SituacaoAprendizagemInput(BaseModel):
+    capacidades_tecnicas: List[str] = Field(default_factory=list)
+    capacidades_socioemocionais: List[str] = Field(default_factory=list)
+    estrategia: str # Ex: "situacao-problema", "projetos"
+    tema_desafio: str # Usaremos como "tematica"
+    
 # Corpo da requisição para gerar o plano de ensino, usando o ID do markdown armazenado
 class PlanGenerationBodyWithStoredId(BaseModel):
     stored_markdown_id: str
@@ -92,8 +98,5 @@ class PlanGenerationBodyWithStoredId(BaseModel):
     curso: str
     turma: str
     uc: str
-    capacidadesTecnicas: Optional[List[str]] = Field(default_factory=list)
-    capacidadesSocioemocionais: Optional[List[str]] = Field(default_factory=list)
-    estrategia: str
-    tematica: Optional[str] = ""
+    situacoes_aprendizagem: List[SituacaoAprendizagemInput] = Field(default_factory=list)
     horarios: List[HorarioAula] = Field(default_factory=list)
