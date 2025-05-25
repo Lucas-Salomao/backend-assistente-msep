@@ -78,7 +78,7 @@ async def process_message(body: RequestBody):
     try:
         logger.info("endpoint CHAT solicitado")
         result = await run_agent(  # Await na chamada assíncrona
-            input=body.message,
+            input_command_or_message=body.message,
             user_id=body.userId,
             thread_id=body.threadId,
         )
@@ -343,8 +343,10 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
     operation_description = "generate_teaching_plan"
     logger.info(f"Endpoint /{operation_description} chamado para stored_id: {body.stored_markdown_id} por user: {body.user_id}, thread_orig: {body.thread_id}")
 
-    # Cria um thread_id único para a operação do agente LangGraph
+    # Usar o thread_id da conversa principal
     agent_interaction_thread_id = body.thread_id
+    
+    horarios_list_of_dicts = [h.model_dump() for h in body.horarios] if body.horarios else []
 
     # Preparar o payload inicial para o agente
     agent_initial_payload = {
@@ -355,16 +357,11 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
         "plan_unidade_operacional": body.escola, # Mapeamento de 'escola' para 'unidade_operacional'
         "plan_nome_curso": body.curso,           # Mapeamento de 'curso' para 'plan_nome_curso'
         "plan_nome_uc": body.uc,               # Mapeamento de 'uc' para 'plan_nome_uc'
-        "plan_capacidades_tecnicas": body.extracted_capacidades_tecnicas or [],
-        "plan_capacidades_socioemocionais": body.extracted_capacidades_socioemocionais or [],
-        "plan_estrategia": body.estrategia, # Garanta que o nome do campo está correto no Pydantic (era estraategia)
+        "plan_capacidades_tecnicas": body.capacidadesTecnicas or [],
+        "plan_capacidades_socioemocionais": body.capacidadesSocioemocionais or [],
+        "plan_estrategia": body.estrategia,
         "plan_tematica": body.tematica,
-        "messages": [] # Operação discreta, sem histórico de chat prévio
-        # Se a ferramenta generate_teaching_plan precisar de extracted_course_name e extracted_ucs_list explicitamente:
-        # "plan_extracted_data": {
-        #     "nomeCurso": body.extracted_course_name,
-        #     "UCs_list": body.extracted_ucs_list
-        # }
+        "plan_horarios": horarios_list_of_dicts,
     }
     
     try:
