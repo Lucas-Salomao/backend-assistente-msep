@@ -5,7 +5,7 @@ class RequestBody(BaseModel):
     message: str
     userId: str
     threadId: str
-    
+       
 class PlanGenerationBody(BaseModel):
     userId: str
     threadId: str
@@ -16,7 +16,7 @@ class PlanGenerationBody(BaseModel):
     uc: str
     capacidadesTecnicas: Optional[List[str]] = Field(default_factory=list)
     capacidadesSocioemocionais: Optional[List[str]] = Field(default_factory=list)
-    estraategia: str
+    estrategia: str
     tematica: Optional[str] = ""
 
 class PlanGenerationResponse(BaseModel):
@@ -77,22 +77,22 @@ class FullPlanDetailsResponse(BaseModel):
     nomeCurso: Optional[str] = None
     unidadesCurriculares: List[UCEntry] = Field(default_factory=list)
 
+class HorarioAula(BaseModel): # Novo modelo para representar os horários
+    dia: str
+    horaInicio: str
+    horaFim: str
+    
 # Corpo da requisição para gerar o plano de ensino, usando o ID do markdown armazenado
 class PlanGenerationBodyWithStoredId(BaseModel):
     stored_markdown_id: str
-    user_id: str # Para rastreamento/LLM config
-    thread_id: str # Para criar um novo thread ou continuar um existente para esta operação
+    user_id: str
+    thread_id: str
     docente: str
-    escola: str # Mapear para unidade_operacional
-    curso: str # nome_curso
-    uc: str    # nome_uc
-    # Dados extraídos anteriormente (título, outras UCs, capacidades) podem ser passados aqui
-    # ou a ferramenta de geração do plano pode re-extraí-los se for mais simples.
-    # Para este exemplo, vamos assumir que são passados.
-    extracted_course_name: Optional[str] = None
-    extracted_ucs_list: Optional[List[str]] = Field(default_factory=list)
-    extracted_capacidades_tecnicas: Optional[List[str]] = Field(default_factory=list)
-    extracted_capacidades_socioemocionais: Optional[List[str]] = Field(default_factory=list)
-    
+    escola: str
+    curso: str
+    uc: str
+    capacidadesTecnicas: Optional[List[str]] = Field(default_factory=list)
+    capacidadesSocioemocionais: Optional[List[str]] = Field(default_factory=list)
     estrategia: str
     tematica: Optional[str] = ""
+    horarios: List[HorarioAula] = Field(default_factory=list)
