@@ -4,9 +4,11 @@ modeloPlanoDeEnsinoSP="""
 
 ## 1. Informações do Curso
 
-**Título:** [Titulo da situação de aprendizagem (usar a sintaxe :red[**título**])]
+**Título:** [Titulo da situação de aprendizagem]
 
 **Curso:** [Nome do curso]
+
+**Turma:** [Nome da turma]
 
 **Unidade Curricular (UC):** [Nome da unidade curricular]
 
@@ -132,9 +134,11 @@ modeloPlanoDeEnsinoEC="""
 
 ## 1. Informações do Curso
 
-**Título:** [Titulo da situação de aprendizagem (usar a sintaxe :red[**título**])]
+**Título:** [Titulo da situação de aprendizagem]
 
 **Curso:** [Nome do curso]
+
+**Turma:** [Nome da turma]
 
 **Unidade Curricular (UC):** [Nome da unidade curricular]
 
@@ -268,9 +272,11 @@ modeloPlanoDeEnsinoP="""
 
 ## 1. Informações do Curso
 
-**Título:** [Titulo da situação de aprendizagem (usar a sintaxe :red[**título**])]
+**Título:** [Titulo da situação de aprendizagem]
 
 **Curso:** [Nome do curso]
+
+**Turma:** [Nome da turma]
 
 **Unidade Curricular (UC):** [Nome da unidade curricular]
 
@@ -385,9 +391,11 @@ modeloPlanoDeEnsinoPA="""
 
 ## 1. Informações do Curso
 
-**Título:** [Titulo da situação de aprendizagem (usar a sintaxe :red[**título**])]
+**Título:** [Titulo da situação de aprendizagem]
 
 **Curso:** [Nome do curso]
+
+**Turma:** [Nome da turma]
 
 **Unidade Curricular (UC):** [Nome da unidade curricular]
 
@@ -553,14 +561,14 @@ modeloAvaliacaoAtual="""
     Não utilizar a marcação <br> para quebra de linha
     Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
     
-| Capacidades       | Critérios de Avaliação    | Autoavaliação | Avaliação |
-| ------------------| ------------------------- | ------------- | --------- |
-| :blue[capacidade] | :red[Critério Dicotômico] |               |           |
-|                   | :red[Critério Dicotômico] |               |           |
-| :blue[capacidade] | :red[Critério Dicotômico] |               |           |
-|                   | :red[Critério Dicotômico] |               |           |
-| :blue[capacidade] | :red[Critério Dicotômico] |               |           |
-|                   | :red[Critério Dicotômico] |               |           |
+| Capacidades  | Critérios de Avaliação| Autoavaliação | Avaliação |
+| -------------| --------------------- | ------------- | --------- |
+| [capacidade] | [Critério Dicotômico] |               |           |
+|              | [Critério Dicotômico] |               |           |
+| [capacidade] | [Critério Dicotômico] |               |           |
+|              | [Critério Dicotômico] |               |           |
+| [capacidade] | [Critério Dicotômico] |               |           |
+|              | [Critério Dicotômico] |               |           |
 
 ]
 
@@ -598,12 +606,12 @@ modeloPlanoAula="""
     Não utilizar a marcação <br> para quebra de linha
     Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
     
-| Horas/Aulas e Data    | Capacidades     | Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação   | Instrumento de Avaliação | Referências |
-|-----------------------|-----------------|---------------|-------------|----------------------------------|--------------------------|--------------------------|-------------|
-| XX horas - DD/MM/AAAA |:blue[capacidade]|               |             |                                  |:red[critério crítico]    |                          |             |
-|                       |                 |               |             |                                  |:green[critério desejável]|                          |             |
-| XX horas - DD/MM/AAAA |:blue[capacidade]|               |             |                                  |:red[critério crítico]    |                          |             |
-|                       |                 |               |             |                                  |:green[critério desejável]|                          |             |
+| Horas/Aulas e Data    | Capacidades| Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação   | Instrumento de Avaliação | Referências |
+|-----------------------|------------|---------------|-------------|----------------------------------|--------------------------|--------------------------|-------------|
+| XX horas - DD/MM/AAAA |[capacidade]|               |             |                                  |[critério crítico]        |                          |             |
+|                       |            |               |             |                                  |[critério desejável]      |                          |             |
+| XX horas - DD/MM/AAAA |[capacidade]|               |             |                                  |[critério crítico]        |                          |             |
+|                       |            |               |             |                                  |[critério desejável]      |                          |             |
 
 ]
 
@@ -662,16 +670,16 @@ modeloPlanoAulaAtual="""
     Não utilizar a marcação <br> para quebra de linha
     Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
     
-| Horas/Aulas e Data                    | Capacidades     | Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação         | Instrumentos de Avaliação | Referências |
-|---------------------------------------|-----------------|---------------|-------------|----------------------------------|--------------------------------|---------------------------|-------------|
-| XX horas - DD/MM/AAAA (Dia da semana) |:blue[capacidade]|               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-| XX horas - DD/MM/AAAA (Dia da semana) |:blue[capacidade]|               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-| XX horas - DD/MM/AAAA (Dia da semana) |:blue[capacidade]|               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-| XX horas - DD/MM/AAAA (Dia da semana) |:blue[capacidade]|               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |:red[Critério Dicotômico]&nbsp; |                           |             |
+| Horas/Aulas e Data                    | Capacidades     | Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação     | Instrumentos de Avaliação | Referências |
+|---------------------------------------|-----------------|---------------|-------------|----------------------------------|----------------------------|---------------------------|-------------|
+| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
+|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
     
 ]
 

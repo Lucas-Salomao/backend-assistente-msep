@@ -195,7 +195,7 @@ async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
         logger.error(f"Erro ao recuperar threads com títulos: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/delete_thread{thread_id}")
+@app.delete("/delete_thread/{thread_id}")
 async def delete_thread(thread_id: str, user_id: str = Form(...)):
     try:
         logger.info(f"Endpoint delete_thread solicitado para thread_id: {thread_id} e user_id: {user_id}")
@@ -356,6 +356,7 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
         "plan_docente": body.docente,
         "plan_unidade_operacional": body.escola, # Mapeamento de 'escola' para 'unidade_operacional'
         "plan_nome_curso": body.curso,           # Mapeamento de 'curso' para 'plan_nome_curso'
+        "plan_turma": body.turma,
         "plan_nome_uc": body.uc,               # Mapeamento de 'uc' para 'plan_nome_uc'
         "plan_capacidades_tecnicas": body.capacidadesTecnicas or [],
         "plan_capacidades_socioemocionais": body.capacidadesSocioemocionais or [],

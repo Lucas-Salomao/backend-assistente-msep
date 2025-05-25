@@ -159,6 +159,7 @@ class AgentState(TypedDict):
     plan_docente: Optional[str]
     plan_unidade_operacional: Optional[str]
     plan_nome_curso: Optional[str] # Pode vir do input do usuário ou da extração anterior
+    plan_curso: Optional[str] # Pode vir do input do usuário ou da extração anterior
     plan_nome_uc: Optional[str]     # Pode vir do input do usuário ou da extração anterior
     plan_capacidades_tecnicas: Optional[List[str]]
     plan_capacidades_socioemocionais: Optional[List[str]]
@@ -182,6 +183,7 @@ TOOL_ARGUMENTS = {
         "docente": "plan_docente",
         "unidade_operacional": "plan_unidade_operacional",
         "nome_curso": "plan_nome_curso",
+        "curso": "plan_curso",
         "nome_uc": "plan_nome_uc",
         "capacidades_tecnicas": "plan_capacidades_tecnicas",
         "capacidades_socioemocionais": "plan_capacidades_socioemocionais",

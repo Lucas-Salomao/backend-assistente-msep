@@ -44,6 +44,7 @@ async def generate_teaching_plan(
     unidade_operacional: str,
     # Os seguintes parâmetros devem vir dos dados extraídos anteriormente ou do input do usuário
     nome_curso: str,
+    turma: str,
     nome_uc: str,
     capacidades_tecnicas: List[str],
     capacidades_socioemocionais: List[str],
@@ -68,6 +69,7 @@ async def generate_teaching_plan(
         plan_params = MockPlanParams() # type: ignore
         plan_params.uc = nome_uc
         plan_params.curso = nome_curso
+        plan_params.turma = turma
         plan_params.estrategia = estrategia
         plan_params.unidade = unidade_operacional
         plan_params.docente = docente

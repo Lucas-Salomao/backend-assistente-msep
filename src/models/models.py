@@ -90,6 +90,7 @@ class PlanGenerationBodyWithStoredId(BaseModel):
     docente: str
     escola: str
     curso: str
+    turma: str
     uc: str
     capacidadesTecnicas: Optional[List[str]] = Field(default_factory=list)
     capacidadesSocioemocionais: Optional[List[str]] = Field(default_factory=list)
