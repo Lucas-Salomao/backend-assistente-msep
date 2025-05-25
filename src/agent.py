@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
-from typing import TypedDict, Annotated, Optional, List, Dict, Any
+from typing import TypedDict, Annotated, Optional, List, Dict, Any, cast
 from langgraph.prebuilt import ToolExecutor
 from src.tools import tools
 from langchain_google_vertexai import ChatVertexAI
@@ -12,6 +12,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg import AsyncConnection
 import vertexai
 import json
+from src.models.models import SituacaoAprendizagemInput
 
 # Configuração do logging
 logging.basicConfig(
@@ -57,7 +58,6 @@ async def get_user_config(user_id: str):
 
 # Configuração inicial do Gemini via Vertex AI (não mais global)
 # llm será criado por requisição
-
 async def get_llm(user_id: str):
     config = await get_user_config(user_id)
     return ChatVertexAI(
@@ -156,17 +156,20 @@ class AgentState(TypedDict):
 
     # Para geração do plano (a ferramenta recebe o ID e busca o markdown)
     stored_markdown_id: Optional[str]
+    
     plan_docente: Optional[str]
     plan_unidade_operacional: Optional[str]
     plan_nome_curso: Optional[str] # Pode vir do input do usuário ou da extração anterior
-    plan_curso: Optional[str] # Pode vir do input do usuário ou da extração anterior
+    plan_turma: Optional[str]
     plan_nome_uc: Optional[str]     # Pode vir do input do usuário ou da extração anterior
-    plan_capacidades_tecnicas: Optional[List[str]]
-    plan_capacidades_socioemocionais: Optional[List[str]]
-    plan_estrategia: Optional[str]
-    plan_tematica: Optional[str]
-    plan_horarios: Optional[List[Dict[str, str]]]
-    plan_extracted_data: Optional[Dict[str, Any]]
+    
+    # A lista de SAs, onde cada SA tem seus próprios detalhes
+    plan_situacoes_aprendizagem: Optional[List[Dict[str, Any]]] # Lista de SAs como dicts
+                                                                # Cada dict terá: capacidades_tecnicas, socioemocionais, estrategia, tema_desafio
+                                                                
+    plan_horarios: Optional[List[Dict[str, str]]] # Horários gerais para a UC
+    
+    plan_extracted_data: Optional[Dict[str, Any]] # Usado pela ferramenta de extração, não diretamente pela de geração
     
 tool_map = {tool.name if hasattr(tool, 'name') else tool.__name__: tool for tool in tools}
 tool_executor = ToolExecutor(tools)
@@ -183,12 +186,9 @@ TOOL_ARGUMENTS = {
         "docente": "plan_docente",
         "unidade_operacional": "plan_unidade_operacional",
         "nome_curso": "plan_nome_curso",
-        "curso": "plan_curso",
+        "turma": "plan_turma",
         "nome_uc": "plan_nome_uc",
-        "capacidades_tecnicas": "plan_capacidades_tecnicas",
-        "capacidades_socioemocionais": "plan_capacidades_socioemocionais",
-        "estrategia": "plan_estrategia",
-        "tematica": "plan_tematica",
+        "situacoes_aprendizagem_param": "plan_situacoes_aprendizagem",
         "horarios_param": "plan_horarios"
     }
 }
@@ -215,7 +215,7 @@ async def identify_tool(state: AgentState) -> AgentState:
         # são preenchidos no AgentState pelo endpoint da API ANTES de chamar run_agent.
         logger.info(f"Comando direto para ferramenta de Geração de Plano: {update_payload['tool_call']}")
     else: # Lógica de chat normal (como antes)
-        logger.info("Nenhum comando PDF/Plano direto, usando LLM para chat/busca.")
+        logger.info("Nenhum comando direto, usando LLM para chat.")
         prompt = tool_prompt.format(input=user_input)
         try:
             llm_for_tool_choice = await get_llm(state["user_id"])
@@ -232,7 +232,9 @@ async def identify_tool(state: AgentState) -> AgentState:
             update_payload["tool_result"] = json.dumps({"error": f"Erro ao identificar ferramenta de chat: {str(e)}"})
             # tool_call continua None, ou poderia default para chatmsep mesmo em erro
 
-    state.update(update_payload)
+    # Usar type assertion para state
+    cast_state = cast(Dict[str, Any], state)
+    cast_state.update(update_payload)
     return state
 
 async def execute_tool(state: AgentState) -> AgentState:
@@ -247,7 +249,7 @@ async def execute_tool(state: AgentState) -> AgentState:
         
         # Preparar os argumentos dinamicamente com base no mapeamento
         tool_args_mapping = TOOL_ARGUMENTS.get(state["tool_call"], {})
-        tool_input = {}
+        tool_input : Dict[str, Any] = {} # Definir o tipo explicitamente
         for arg_name, state_key in tool_args_mapping.items():
             tool_input[arg_name] = state.get(state_key)
         logger.debug(f"Chamando ferramenta {state['tool_call']} com input: {tool_input}")   
@@ -262,19 +264,6 @@ async def execute_tool(state: AgentState) -> AgentState:
         logger.info("Nenhuma ferramenta a ser executada")
     return state
 
-# async def generate_response(state: AgentState) -> AgentState:
-#     logger.info("Gerando resposta final")
-#     llm = await get_llm(state["user_id"])
-#     tool_result = state["tool_result"]
-#     prompt = response_prompt.format(
-#         messages="\n".join(state["messages"]),
-#         input=state["input"],
-#         tool_result=state["tool_result"] if state["tool_result"] else "Nenhum resultado de ferramenta",
-#     )
-#     state["response"] = (await llm.ainvoke(prompt)).content
-#     state["messages"] = state.get("messages", []) + [f"User: {state['input']}", f"Agent: {state['response']}"]
-#     logger.info(f"Resposta gerada: {state['response']}")
-#     return state
 async def generate_response(state: AgentState) -> AgentState:
     logger.info(f"Gerando resposta final para tool_call: {state.get('tool_call')}")
     
@@ -396,7 +385,8 @@ async def run_agent(
 
     initial_messages = previous_state_values.get("messages", [])
     current_title = previous_state_values.get("title")
-
+    
+    # Cria um dicionário com todos os campos esperados por AgentState e seus tipos default/None
     current_state_dict: Dict[str, Any] = {
         "input": input_command_or_message, # ATRIBUI o input_command_or_message ao campo 'input' do estado
         "user_id": user_id,
@@ -411,25 +401,57 @@ async def run_agent(
         "plan_docente": None,
         "plan_unidade_operacional": None,
         "plan_nome_curso": None,
+        "plan_turma": None,
         "plan_nome_uc": None,
-        "plan_capacidades_tecnicas": [],
-        "plan_capacidades_socioemocionais": [],
-        "plan_estrategia": None,
-        "plan_tematica": None,
-        "plan_extracted_data": None,
+        "plan_situacoes_aprendizagem": [],
         "plan_horarios": [],
+        "plan_extracted_data": None,
     }
+    current_state_dict.update(previous_state_values)
 
     if initial_payload:
         logger.info(f"Aplicando initial_payload ao estado: {list(initial_payload.keys())}")
         current_state_dict.update(initial_payload)
         if "input" in initial_payload: # Se o payload definir um input, ele tem precedência
             current_state_dict["input"] = initial_payload["input"]
-        if "messages" not in initial_payload: # Para operações, não carregue msgs do checkpoint
-             current_state_dict["messages"] = []
+        # Para operações como Geração de Plano ou Extração, o histórico de chat não deve ser carregado do checkpoint,
+        # pois são operações discretas.
+        if "CMD_GENERATE_TEACHING_PLAN" in input_command_or_message or \
+           "CMD_EXTRACT_FULL_PLAN_DETAILS" in input_command_or_message:
+            if "messages" not in initial_payload: # A menos que o payload force mensagens
+                 current_state_dict["messages"] = []
+            if "title" not in initial_payload: # E não deve carregar título anterior
+                current_state_dict["title"] = None
 
+    # Garantir que todos os Optional[List] sejam listas e não None antes de passar para AgentState
+    for key in ["plan_situacoes_aprendizagem", "plan_horarios"]:
+        if current_state_dict.get(key) is None:
+            current_state_dict[key] = []
+    
+    # O `initial_payload` fornecido por `api.py` para generate_teaching_plan
+    # já conterá "plan_situacoes_aprendizagem" devidamente preenchido.
+    if "plan_situacoes_aprendizagem" in initial_payload if initial_payload else False:
+        # Certificando que o que está em current_state_dict é o que veio do initial_payload
+        # e que é uma lista de dicts, como esperado pela ferramenta.
+        # O Pydantic já validou o formato em api.py
+        valid_sas = []
+        if isinstance(initial_payload.get("plan_situacoes_aprendizagem"), list): # type: ignore
+            for sa_input in initial_payload["plan_situacoes_aprendizagem"]: # type: ignore
+                if isinstance(sa_input, dict): # Se já for dict, ótimo
+                    valid_sas.append(sa_input)
+                elif hasattr(sa_input, 'model_dump'): # Se for um objeto Pydantic
+                    valid_sas.append(sa_input.model_dump())
+                else:
+                    logger.warning(f"Item SA não é dict nem Pydantic model no initial_payload: {type(sa_input)}")
+            current_state_dict["plan_situacoes_aprendizagem"] = valid_sas
+        else:
+            logger.warning("plan_situacoes_aprendizagem no initial_payload não é uma lista.")
+            current_state_dict["plan_situacoes_aprendizagem"] = []
 
-    final_initial_state_for_agent = AgentState(**current_state_dict) # type: ignore
+    # Converte o dicionário para AgentState, o LangGraph lida com a tipagem.
+    # O `cast` é usado para satisfazer o mypy, mas o LangGraph internamente
+    # espera um dicionário que corresponda às chaves e tipos do TypedDict.
+    final_initial_state_for_agent = cast(AgentState, current_state_dict)
     logger.debug(f"Estado inicial para a invocação do agente (thread {thread_id}): { {k: (str(v)[:100] + '...' if isinstance(v, str) and len(v) > 100 else v) for k, v in final_initial_state_for_agent.items()} }")
     result = await agent.ainvoke(final_initial_state_for_agent, config=config)
     
