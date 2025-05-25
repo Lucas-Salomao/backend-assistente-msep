@@ -11,6 +11,7 @@ from langchain_core.prompts import PromptTemplate
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg import AsyncConnection
 import vertexai
+import json
 
 # Configuração do logging
 logging.basicConfig(
@@ -126,7 +127,7 @@ Retorne apenas o nome da ferramenta e mais nada.
 
 response_prompt = PromptTemplate.from_template("""
 {tool_result}
-Retorne o resultado sem modificações.
+Retorne o resultado sem modificações. Não adicione notação de bloco de código ou json. Não adicione ```json```.
 """)
 
 title_prompt = PromptTemplate.from_template("""
@@ -163,7 +164,7 @@ class AgentState(TypedDict):
     plan_capacidades_socioemocionais: Optional[List[str]]
     plan_estrategia: Optional[str]
     plan_tematica: Optional[str]
-    # Outros dados extraídos que podem ser úteis para a ferramenta de geração do plano
+    plan_horarios: Optional[List[Dict[str, str]]]
     plan_extracted_data: Optional[Dict[str, Any]]
     
 tool_map = {tool.name if hasattr(tool, 'name') else tool.__name__: tool for tool in tools}
@@ -185,8 +186,8 @@ TOOL_ARGUMENTS = {
         "capacidades_tecnicas": "plan_capacidades_tecnicas",
         "capacidades_socioemocionais": "plan_capacidades_socioemocionais",
         "estrategia": "plan_estrategia",
-        "tematica": "plan_tematica"
-        # "extracted_initial_data": "plan_extracted_data" # Se passar como um dict
+        "tematica": "plan_tematica",
+        "horarios_param": "plan_horarios"
     }
 }
 
@@ -259,20 +260,63 @@ async def execute_tool(state: AgentState) -> AgentState:
         logger.info("Nenhuma ferramenta a ser executada")
     return state
 
+# async def generate_response(state: AgentState) -> AgentState:
+#     logger.info("Gerando resposta final")
+#     llm = await get_llm(state["user_id"])
+#     tool_result = state["tool_result"]
+#     prompt = response_prompt.format(
+#         messages="\n".join(state["messages"]),
+#         input=state["input"],
+#         tool_result=state["tool_result"] if state["tool_result"] else "Nenhum resultado de ferramenta",
+#     )
+#     state["response"] = (await llm.ainvoke(prompt)).content
+#     state["messages"] = state.get("messages", []) + [f"User: {state['input']}", f"Agent: {state['response']}"]
+#     logger.info(f"Resposta gerada: {state['response']}")
+#     return state
 async def generate_response(state: AgentState) -> AgentState:
-    logger.info("Gerando resposta final")
-    llm = await get_llm(state["user_id"])
-    tool_result = state["tool_result"]
-    prompt = response_prompt.format(
-        messages="\n".join(state["messages"]),
-        input=state["input"],
-        # tool_endereco=tool_endereco,
-        # tool_mapa=tool_mapa,
-        tool_result=state["tool_result"] if state["tool_result"] else "Nenhum resultado de ferramenta",
-    )
-    state["response"] = (await llm.ainvoke(prompt)).content
-    state["messages"] = state.get("messages", []) + [f"User: {state['input']}", f"Agent: {state['response']}"]
-    logger.info(f"Resposta gerada: {state['response']}")
+    logger.info(f"Gerando resposta final para tool_call: {state.get('tool_call')}")
+    
+    current_tool_call = state.get("tool_call")
+    tool_result_from_state = state.get("tool_result", "") # Garante que não seja None
+
+    final_agent_response: str = ""
+
+    # Se a ferramenta é uma das que já retorna o JSON formatado que queremos como "resposta da operação"
+    if current_tool_call in ["generate_teaching_plan"]:
+        if tool_result_from_state:
+            try:
+                # Apenas valida se é JSON, mas a resposta do agente será a string JSON
+                json.loads(tool_result_from_state) 
+                final_agent_response = tool_result_from_state
+                logger.info(f"Usando tool_result diretamente como resposta para a ferramenta '{current_tool_call}'.")
+            except json.JSONDecodeError as e:
+                logger.error(f"Tool_result da ferramenta '{current_tool_call}' não é JSON válido: {e}. Conteúdo: {tool_result_from_state[:200]}...")
+                final_agent_response = json.dumps({"error": f"Resultado inválido da ferramenta {current_tool_call}.", "details": str(e)})
+        else:
+            logger.warning(f"Nenhum tool_result para a ferramenta '{current_tool_call}'.")
+            final_agent_response = json.dumps({"error": f"Nenhum resultado produzido pela ferramenta {current_tool_call}."})
+    
+    # Se não foi tratado acima (ex: é chatmsep ou outra ferramenta textual, ou erro no JSON)
+    if not final_agent_response:
+        logger.info(f"Ferramenta '{current_tool_call}' não tratada diretamente ou tool_result ausente/inválido. Usando LLM para resposta final.")
+        llm = await get_llm(state["user_id"])
+        prompt_str_for_llm = response_prompt.format(
+            messages="\n".join(state.get("messages", [])), # Histórico
+            input=state.get("input", ""), # Input original que disparou a tool/chat
+            tool_result=tool_result_from_state if tool_result_from_state else "Nenhuma ação de ferramenta específica foi realizada ou não produziu resultado para exibir."
+        )
+        try:
+            final_agent_response = (await llm.ainvoke(prompt_str_for_llm)).content
+            logger.info("Resposta final gerada pelo LLM do nó generate_response.")
+        except Exception as e_llm_resp:
+            logger.error(f"Erro ao gerar resposta com LLM no nó generate_response: {e_llm_resp}", exc_info=True)
+            final_agent_response = json.dumps({"error": "Falha crítica ao processar a resposta final."}) # Retorna JSON de erro
+
+    state["response"] = final_agent_response
+    # Adiciona o input original e a resposta final ao histórico.
+    # Se a resposta for um JSON gigante (como o plano), ele vai para o histórico.
+    state["messages"] = state.get("messages", []) + [f"User: {state.get('input', '')}", f"Agent: {state['response']}"]
+    logger.info(f"Nó generate_response concluído. Resposta (início): {state['response'][:200]}...")
     return state
 
 async def generate_title(state: AgentState) -> AgentState:
@@ -329,40 +373,68 @@ async def initialize_agent():
     return agent
 
 # Função assíncrona para rodar o agente
-async def run_agent(input: str, user_id: str, thread_id: str) -> dict:
-    logger.info(f"Iniciando agente para user_id={user_id}, thread_id={thread_id}, input={input}")
-    await initialize_agent()  # Inicializa o agente na primeira chamada
-    config = {"configurable": {"thread_id": thread_id},
-              "metadata": {"user_id": user_id}}
+async def run_agent(
+    input_command_or_message: str,
+    user_id: str,
+    thread_id: str,
+    initial_payload: Optional[Dict[str, Any]] = None
+) -> Dict:
+    logger.info(f"Iniciando agente para user_id={user_id}, thread_id={thread_id}, input='{input_command_or_message[:100]}...'")
+    await initialize_agent()
+    config = {"configurable": {"thread_id": thread_id}, "metadata": {"user_id": user_id}}
     
-    # Recupera o estado anterior do checkpoint, se existir
-    previous_state = await agent.aget_state(config)
-    
-    # Obtém as mensagens anteriores se existirem
-    initial_messages = []
-    if previous_state and "messages" in previous_state.values:
-        initial_messages = previous_state.values["messages"]
-    
-    # Obtém o título anterior se existir
-    title = None
-    if previous_state and "title" in previous_state.values:
-        title = previous_state.values["title"]
-        logger.info(f"Título recuperado do estado anterior: {title}")
-    
-    initial_state = {
-        "input": input,
+    previous_state_values = {}
+    if not initial_payload:
+        previous_state_tuple = await agent.aget_state(config)
+        if previous_state_tuple:
+            previous_state_values = previous_state_tuple.values
+            logger.info(f"Estado anterior recuperado para thread_id={thread_id}")
+        else:
+            logger.info(f"Nenhum estado anterior encontrado para thread_id={thread_id}, iniciando novo.")
+
+    initial_messages = previous_state_values.get("messages", [])
+    current_title = previous_state_values.get("title")
+
+    current_state_dict: Dict[str, Any] = {
+        "input": input_command_or_message, # ATRIBUI o input_command_or_message ao campo 'input' do estado
         "user_id": user_id,
         "thread_id": thread_id,
         "tool_call": None,
         "tool_result": None,
         "response": None,
-        "title": title,  # Pode ser None para novas conversas
-        "messages": initial_messages
+        "title": current_title,
+        "messages": initial_messages,
+        "pdf_markdown_content": None,
+        "stored_markdown_id": None,
+        "plan_docente": None,
+        "plan_unidade_operacional": None,
+        "plan_nome_curso": None,
+        "plan_nome_uc": None,
+        "plan_capacidades_tecnicas": [],
+        "plan_capacidades_socioemocionais": [],
+        "plan_estrategia": None,
+        "plan_tematica": None,
+        "plan_extracted_data": None,
+        "plan_horarios": [],
     }
-    result = await agent.ainvoke(initial_state, config=config)  # Chamada assíncrona do grafo
-    logger.info(f"Agente concluído com resposta: {result['response']}")
-    logger.info(f"Título da conversa: {result['title']}")
+
+    if initial_payload:
+        logger.info(f"Aplicando initial_payload ao estado: {list(initial_payload.keys())}")
+        current_state_dict.update(initial_payload)
+        if "input" in initial_payload: # Se o payload definir um input, ele tem precedência
+            current_state_dict["input"] = initial_payload["input"]
+        if "messages" not in initial_payload: # Para operações, não carregue msgs do checkpoint
+             current_state_dict["messages"] = []
+
+
+    final_initial_state_for_agent = AgentState(**current_state_dict) # type: ignore
+    logger.debug(f"Estado inicial para a invocação do agente (thread {thread_id}): { {k: (str(v)[:100] + '...' if isinstance(v, str) and len(v) > 100 else v) for k, v in final_initial_state_for_agent.items()} }")
+    result = await agent.ainvoke(final_initial_state_for_agent, config=config)
+    
+    logger.info(f"Agente (thread {thread_id}) concluído. Resposta: '{str(result.get('response'))[:200]}...', Título: {result.get('title')}")
     return {
-        "response": result["response"],
-        "title": result["title"]
+        "response": result.get("response"),
+        "title": result.get("title"),
+        "thread_id": thread_id,
+        "user_id": user_id
     }
