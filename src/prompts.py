@@ -78,6 +78,12 @@ modeloItem4EstrategiaSA_Base="""
 **Nº de aulas previstas para desenvolver esta Situação de Aprendizagem:** [Estimar com base na complexidade, carga horária da UC e horários disponíveis. Ex: 10 aulas]
 **Carga horária prevista para o desenvolvimento desta Situação de Aprendizagem:** [Estimar em horas. Ex: 30 horas]
 
+### Título da Situação de Aprendizagem:
+[
+    - Inserir título da Situação de Aprendizagem, relacionado à unidade curricular selecionada.
+    - O título deve ser claro, objetivo e refletir o tema da situação de aprendizagem.
+]	
+
 {template_especifico_da_estrategia_aqui}
 Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.
 """
