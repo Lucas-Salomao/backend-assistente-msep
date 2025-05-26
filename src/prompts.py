@@ -1,10 +1,7 @@
-modeloPlanoDeEnsinoSP="""
-
+modeloCabecalhoPlanoEnsino="""
 # Plano de Ensino segundo a MSEP
 
 ## 1. Informações do Curso
-
-**Título:** [Titulo da situação de aprendizagem]
 
 **Curso:** [Nome do curso]
 
@@ -16,10 +13,6 @@ modeloPlanoDeEnsinoSP="""
 
 **Carga Horária total na UC:** [Carga horária total do curso]
 
-**Nº de aulas previstas para desenvolver a situação de aprendizagem:** [Número de aulas para desenvolver a situação de aprendizagem]
-
-**Carga horária prevista para o desenvolvimento da Situação de Aprendizagem:** [Carga horária prevista para o desenvolvimento da Situação de Aprendizagem]
-
 **Objetivo da Unidade Curricular:** [Objetivo geral da unidade curricular de acordo com o plano de curso]
 
 **Modalidade de ensino:** [Presencial, EAD ou Híbrida]
@@ -29,7 +22,8 @@ modeloPlanoDeEnsinoSP="""
 **Unidade:** [Escola Senai]
 
 Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
+"""
+modeloItem2CapacidadesSA="""
 ## 2. Capacidades a serem desenvolvidas:
 
 ### 2.1 Capacidades Básicas [Somente para Módulo Básico]:
@@ -65,18 +59,29 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
 ]
 
 Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
+"""
+modeloItem3ConhecimentosSA="""
 ## 3. Conhecimentos:
 
 [
-    - Lista numerada com hierarquia de tópicos e sub-tópicos com alguns conhecimentos para propor a situação de aprendizagem.
+    - Lista numerada com hierarquia de tópicos e sub-tópicos.
     - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
+    - Escolher somente os conhecimentos que são necessários para o desenvolvimento da situação de aprendizagem, de acordo com as capacidades escolhidas no item 2, se atentando para não escolher todos os conhecimentos da unidade curricular em questão.
 ]
 
 Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+"""
 
-## 4. Estratégia de aprendizagem desafiadora: [Indicar o tipo de estratégia de aprendizagem escolhida em itálico]
+modeloItem4EstrategiaSA_Base="""
+## 4. Estratégia de aprendizagem desafiadora: *{estrategia_nome_formatado}* [Indicar o tipo de estratégia de aprendizagem escolhida em itálico]
 
+**Nº de aulas previstas para desenvolver esta Situação de Aprendizagem:** [Estimar com base na complexidade, carga horária da UC e horários disponíveis. Ex: 10 aulas]
+**Carga horária prevista para o desenvolvimento desta Situação de Aprendizagem:** [Estimar em horas. Ex: 30 horas]
+
+{template_especifico_da_estrategia_aqui}
+Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.
+"""
+modeloPlanoDeEnsinoSP="""
 [
     Propor uma Situação de Aprendizagem de acordo com as capacidades escolhidas no item 2 e com os conhecimentos escolhidos no item 3.
     Esse texto não deve conter no plano é apenas a referência de como elaborar a situação de aprendizagem.
@@ -129,72 +134,6 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
 """
 
 modeloPlanoDeEnsinoEC="""
-
-# Plano de Ensino segundo a MSEP
-
-## 1. Informações do Curso
-
-**Título:** [Titulo da situação de aprendizagem]
-
-**Curso:** [Nome do curso]
-
-**Turma:** [Nome da turma]
-
-**Unidade Curricular (UC):** [Nome da unidade curricular]
-
-**Módulo:** [Básico ou Específico]
-
-**Carga Horária total na UC:** [Carga horária total do curso]
-
-**Nº de aulas previstas para desenvolver a situação de aprendizagem:** [Número de aulas para desenvolver a situação de aprendizagem]
-
-**Carga horária prevista para o desenvolvimento da Situação de Aprendizagem:** [Carga horária prevista para o desenvolvimento da Situação de Aprendizagem]
-
-**Objetivo da Unidade Curricular:** [Objetivo geral da unidade curricular de acordo com o plano de curso]
-
-**Modalidade de ensino:** [Presencial, EAD ou Híbrida]
-
-**Professor Titular:** [Nome do professor titular]
-
-**Unidade:** [Escola Senai]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 2. Capacidades a serem desenvolvidas:
-
-### 2.1 Capacidades Básicas [Somente para Módulo Básico]:
-
-[Escolha no máximo cinco capacidades básicas que são necessárias o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades] 
-
-### 2.1 Capacidades Técnicas [Somente para Módulo Específico]:
-
-[Escolha no máximo cinco técnicas que são necessárias o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades]
-
-### 2.2 Capacidades Socioemocionais:
-
-[Escolha no máximo três capacidades socioemocionais que são necessárias para o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de três capacidades]
-
-[
-    - Nesse campo, precisamos selecionar algumas (não todas) capacidades que serão desenvolvidas na Situação de Aprendizagem (sejam básicas, técnicas e socioemocionais).
-    - Ao selecionarmos as capacidades que serão desenvolvidas, precisamos cuidar da gradualidade das capacidades, trabalhando com propostas que contemplem capacidades de menor complexidade para maior complexidade.
-    - Importante: não podemos alterar as capacidades previstas no plano de curso.
-    - Exemplo: do verbo identificar para o verbo configurar, temos uma diferença grande na complexidade da capacidade preterida.
-    - Escolher somente as capacidades que são necessárias para o desenvolvimento da situação de aprendizagem, de acordo com a unidade curricular do plano de curso, se atentando para não escolher todas as capacidades da unidade curricular.
-]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 3. Conhecimentos:
-
-[
-    - Lista numerada com hierarquia de tópicos e sub-tópicos com alguns conhecimentos para propor a situação de aprendizagem.
-    - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
-]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 4. Estratégia de aprendizagem desafiadora: [Indicar o tipo de estratégia de aprendizagem escolhida em itálico]
-
 ### Título do Estudo de Caso:
 [
     Insira um título que seja interessante e que reflita o tema do caso
@@ -267,72 +206,6 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
 """
 
 modeloPlanoDeEnsinoP="""
-
-# Plano de Ensino segundo a MSEP
-
-## 1. Informações do Curso
-
-**Título:** [Titulo da situação de aprendizagem]
-
-**Curso:** [Nome do curso]
-
-**Turma:** [Nome da turma]
-
-**Unidade Curricular (UC):** [Nome da unidade curricular]
-
-**Módulo:** [Básico ou Específico]
-
-**Carga Horária total na UC:** [Carga horária total do curso]
-
-**Nº de aulas previstas para desenvolver a situação de aprendizagem:** [Número de aulas para desenvolver a situação de aprendizagem]
-
-**Carga horária prevista para o desenvolvimento da Situação de Aprendizagem:** [Carga horária prevista para o desenvolvimento da Situação de Aprendizagem]
-
-**Objetivo da Unidade Curricular:** [Objetivo geral da unidade curricular de acordo com o plano de curso]
-
-**Modalidade de ensino:** [Presencial, EAD ou Híbrida]
-
-**Professor Titular:** [Nome do professor titular]
-
-**Unidade:** [Escola Senai]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 2. Capacidades a serem desenvolvidas:
-
-### 2.1 Capacidades Básicas [Somente para Módulo Básico]:
-
-[Escolha no máximo cinco capacidades básicas que são necessárias o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades] 
-
-### 2.1 Capacidades Técnicas [Somente para Módulo Específico]:
-
-[Escolha no máximo cinco técnicas que são necessárias o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades]
-
-### 2.2 Capacidades Socioemocionais:
-
-[Escolha no máximo três capacidades socioemocionais que são necessárias para o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de três capacidades]
-
-[
-    - Nesse campo, precisamos selecionar algumas (não todas) capacidades que serão desenvolvidas na Situação de Aprendizagem (sejam básicas, técnicas e socioemocionais).
-    - Ao selecionarmos as capacidades que serão desenvolvidas, precisamos cuidar da gradualidade das capacidades, trabalhando com propostas que contemplem capacidades de menor complexidade para maior complexidade.
-    - Importante: não podemos alterar as capacidades previstas no plano de curso.
-    - Exemplo: do verbo identificar para o verbo configurar, temos uma diferença grande na complexidade da capacidade preterida.
-    - Escolher somente as capacidades que são necessárias para o desenvolvimento da situação de aprendizagem, de acordo com a unidade curricular do plano de curso, se atentando para não escolher todas as capacidades da unidade curricular.
-]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 3. Conhecimentos:
-
-[
-    - Lista numerada com hierarquia de tópicos e sub-tópicos com alguns conhecimentos para propor a situação de aprendizagem.
-    - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
-]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 4. Estratégia de aprendizagem desafiadora: [Indicar o tipo de estratégia de aprendizagem escolhida em itálico]
-
 ### Título do Projeto:
 [
     Insira o título do projeto, relacionado ao tema da unidade curricular
@@ -386,75 +259,9 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
 """
 
 modeloPlanoDeEnsinoPA="""
-
-# Plano de Ensino segundo a MSEP
-
-## 1. Informações do Curso
-
-**Título:** [Titulo da situação de aprendizagem]
-
-**Curso:** [Nome do curso]
-
-**Turma:** [Nome da turma]
-
-**Unidade Curricular (UC):** [Nome da unidade curricular]
-
-**Módulo:** [Básico ou Específico]
-
-**Carga Horária total na UC:** [Carga horária total do curso]
-
-**Nº de aulas previstas para desenvolver a situação de aprendizagem:** [Número de aulas para desenvolver a situação de aprendizagem]
-
-**Carga horária prevista para o desenvolvimento da Situação de Aprendizagem:** [Carga horária prevista para o desenvolvimento da Situação de Aprendizagem]
-
-**Objetivo da Unidade Curricular:** [Objetivo geral da unidade curricular de acordo com o plano de curso]
-
-**Modalidade de ensino:** [Presencial, EAD ou Híbrida]
-
-**Professor Titular:** [Nome do professor titular]
-
-**Unidade:** [Escola Senai]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 2. Capacidades a serem desenvolvidas:
-
-### 2.1 Capacidades Básicas [Somente para Módulo Básico]:
-
-[Escolha no máximo cinco capacidades básicas que são necessárias o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades] 
-
-### 2.1 Capacidades Técnicas [Somente para Módulo Específico]:
-
-[Escolha no máximo cinco técnicas que são necessárias o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades]
-
-### 2.2 Capacidades Socioemocionais:
-
-[Escolha no máximo três capacidades socioemocionais que são necessárias para o desenvolvimento da situação de aprendizagem proposta. Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de três capacidades]
-
-[
-    - Nesse campo, precisamos selecionar algumas (não todas) capacidades que serão desenvolvidas na Situação de Aprendizagem (sejam básicas, técnicas e socioemocionais).
-    - Ao selecionarmos as capacidades que serão desenvolvidas, precisamos cuidar da gradualidade das capacidades, trabalhando com propostas que contemplem capacidades de menor complexidade para maior complexidade.
-    - Importante: não podemos alterar as capacidades previstas no plano de curso.
-    - Exemplo: do verbo identificar para o verbo configurar, temos uma diferença grande na complexidade da capacidade preterida.
-    - Escolher somente as capacidades que são necessárias para o desenvolvimento da situação de aprendizagem, de acordo com a unidade curricular do plano de curso, se atentando para não escolher todas as capacidades da unidade curricular.
-]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 3. Conhecimentos:
-
-[
-    - Lista numerada com hierarquia de tópicos e sub-tópicos com alguns conhecimentos para propor a situação de aprendizagem.
-    - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
-]
-
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
-
-## 4. Estratégia de aprendizagem desafiadora: [Indicar o tipo de estratégia de aprendizagem escolhida em itálico]
-
 ### Título:
 [
-    Inserir título da pesquisa, relacionado à unidade curricular selecionada
+    Inserir título da pesquisa aplicada, relacionado à unidade curricular selecionada
 ]
 
 ### Problema:
@@ -464,12 +271,12 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
 
 ### Objetivo:
 [
-    Definir o objetivo geral da pesquisa, explicitando o que se pretende alcançar com a investigação.
+    Definir o objetivo geral da pesquisa aplicada, explicitando o que se pretende alcançar com a investigação.
 ]
 
 ### Justificativa:
 [
-    Explicar a importância da pesquisa, destacando a relevância para a área da unidade curricular selecionada, os impactos esperados e a contribuição para a prática profissional.
+    Explicar a importância da pesquisa aplicada, destacando a relevância para a área da unidade curricular selecionada, os impactos esperados e a contribuição para a prática profissional.
 ]
 
 ### Metodologia:
@@ -478,7 +285,7 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
         [
             Descrever a abordagem metodológica a ser utilizada, como quantitativa, qualitativa ou mista.
         ]
-    - Delineamento da pesquisa:
+    - Delineamento da pesquisa aplicada:
         [
             Especificar o tipo de delineamento, como estudo de caso, pesquisa exploratória, pesquisa experimental, entre outros.
         ]
@@ -496,7 +303,7 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
         ]
 ]
 
-### Etapas da pesquisa:
+### Etapas da pesquisa aplicada:
 [
     Descrever as etapas da pesquisa, com detalhamento das atividades a serem realizadas em cada etapa.
 ]
@@ -537,8 +344,8 @@ modeloAvaliacaoAtual="""
 ### 5.1 Critérios Dicotômicos
     
     Tabela contendo como título "### Instrumento de Registro" 
-        Nome do aluno:_____________ \n\n
-        Turma:_____________
+        Nome do aluno:_____________ \n
+        Turma:_____________\n
     - Colunas:
         Capacidades básicas/técnicas e socioemocionais
             [
