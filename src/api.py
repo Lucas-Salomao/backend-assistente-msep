@@ -1,7 +1,7 @@
 import logging
 import platform
 import asyncio
-from typing import Optional, Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, File, HTTPException, Request, BackgroundTasks, Form, UploadFile
 from fastapi.responses import FileResponse
 import os
@@ -19,8 +19,9 @@ from .models.models import (
     ChatHistoryRequest, MessageInfo, ChatHistoryResponse,
     ThreadInfo, GetThreadsWithTitlesRequest, GetThreadsWithTitlesResponse,
     ModelConfigRequest,
-    FullPlanDetailsResponse, # Nosso modelo de resposta para extração
-    PlanGenerationBodyWithStoredId, PlanGenerationResponse # Para geração do plano
+    FullPlanDetailsResponse,
+    PlanGenerationBodyWithStoredId, PlanGenerationResponse,
+    SituacaoAprendizagemInput
 )
 
 # Importa a middleware CORS <<<<<<----- ADICIONADO
@@ -346,7 +347,14 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
     # Usar o thread_id da conversa principal
     agent_interaction_thread_id = body.thread_id
     
+    # Converter Pydantic models para dicts para o initial_payload
     horarios_list_of_dicts = [h.model_dump() for h in body.horarios] if body.horarios else []
+    
+    # Converter cada SituacaoAprendizagemInput para dict
+    situacoes_aprendizagem_list_of_dicts = []
+    if body.situacoes_aprendizagem:
+        for sa_input_model in body.situacoes_aprendizagem:
+            situacoes_aprendizagem_list_of_dicts.append(sa_input_model.model_dump())
 
     # Preparar o payload inicial para o agente
     agent_initial_payload = {
@@ -358,14 +366,13 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
         "plan_nome_curso": body.curso,           # Mapeamento de 'curso' para 'plan_nome_curso'
         "plan_turma": body.turma,
         "plan_nome_uc": body.uc,               # Mapeamento de 'uc' para 'plan_nome_uc'
-        "plan_capacidades_tecnicas": body.capacidadesTecnicas or [],
-        "plan_capacidades_socioemocionais": body.capacidadesSocioemocionais or [],
-        "plan_estrategia": body.estrategia,
-        "plan_tematica": body.tematica,
+        "plan_situacoes_aprendizagem": situacoes_aprendizagem_list_of_dicts, # Lista de SAs
         "plan_horarios": horarios_list_of_dicts,
+        "messages": [], # Operação discreta, sem histórico
     }
     
     try:
+        logger.debug(f"Initial payload para o agente ({operation_description}): { {k:v for k,v in agent_initial_payload.items() if k != 'plan_situacoes_aprendizagem'} }, #SAs: {len(situacoes_aprendizagem_list_of_dicts)}")
         agent_result_dict = await run_agent(
             input_command_or_message=f"CMD_GENERATE_TEACHING_PLAN:doc_id={body.stored_markdown_id}", # Comando gatilho
             user_id=body.user_id,
@@ -378,7 +385,12 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
             logger.error(f"Agente não retornou resposta para {operation_description} (stored_id: {body.stored_markdown_id})")
             raise HTTPException(status_code=500, detail="Agente não retornou o plano de ensino gerado.")
             
-        plan_data = json.loads(plan_markdown_json_str)
+        try:
+            plan_data = json.loads(plan_markdown_json_str)
+        except json.JSONDecodeError as json_err:
+            logger.error(f"Resposta da ferramenta {operation_description} não é JSON válido: {plan_markdown_json_str[:500]}... Erro: {json_err}")
+            raise HTTPException(status_code=500, detail=f"Resposta inválida da ferramenta de geração de plano: {json_err}")
+        
         if "error" in plan_data:
             error_detail = plan_data.get('details', plan_data.get('error', 'Erro desconhecido da ferramenta'))
             logger.error(f"Erro da ferramenta {operation_description} (stored_id: {body.stored_markdown_id}): {error_detail}")
@@ -398,4 +410,6 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
  
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv('PORT')), timeout_keep_alive=300)
+    port = int(os.getenv('PORT'))
+    logger.info(f"Servidor FastAPI será iniciado na porta {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port, timeout_keep_alive=300)
