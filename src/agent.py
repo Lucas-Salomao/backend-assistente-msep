@@ -61,7 +61,7 @@ async def get_user_config(user_id: str):
 async def get_llm(user_id: str):
     config = await get_user_config(user_id)
     return ChatVertexAI(
-        model_name="gemini-2.0-flash-001",
+        model_name=os.getenv("MODEL_ID"),
         project=os.getenv("PROJECT_ID"),
         location=os.getenv("LOCATION", "us-central1"),
         temperature=config["temperature"],
