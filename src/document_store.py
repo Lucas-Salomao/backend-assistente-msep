@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Configurações
 STRING_POSTGRES = f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}"
 GCS_MARKDOWN_BUCKET_NAME = os.getenv("GCS_MARKDOWN_BUCKET_NAME")
+GCS_PLANS_BUCKET_NAME = os.getenv("GCS_PLANS_BUCKET_NAME")
 
 async def get_db_connection():
     return await AsyncConnection.connect(STRING_POSTGRES, autocommit=True)
@@ -88,7 +89,7 @@ async def store_markdown_document(
         logger.error("GCS Bucket não configurado. Não é possível armazenar o Markdown.")
         raise ValueError("GCS Bucket não configurado para armazenar arquivo.")
 
-    gcs_blob_name = f"processed_markdowns/{user_id}/{doc_id}.md" # Padrão de nomeação no GCS
+    gcs_blob_name = f"processed_markdowns/{user_id}/{doc_id}.json" # Padrão de nomeação no GCS
     
     await _upload_to_gcs(GCS_MARKDOWN_BUCKET_NAME, markdown_content, gcs_blob_name)
     logger.info(f"Markdown (ID: {doc_id}) armazenado no GCS em {gcs_blob_name}.")
@@ -105,6 +106,40 @@ async def store_markdown_document(
             )
     logger.info(f"Metadados do Markdown (ID: {doc_id}, GCS: {gcs_blob_name}) salvos no DB.")
     return str(doc_id)
+
+async def store_plan_document(
+    user_id: str,
+    thread_id: str,
+    plan_json_content: str,
+    course_plan_id: str,
+) -> str:
+    """
+    Armazena o plano de curso (JSON) no GCS e os metadados na tabela user_plans.
+    Retorna o ID do plano armazenado.
+    """
+    plan_id = uuid.uuid4()
+
+    if not GCS_PLANS_BUCKET_NAME:
+        logger.error("GCS Bucket não configurado. Não é possível armazenar o plano.")
+        raise ValueError("GCS Bucket não configurado para armazenar arquivo.")
+
+    gcs_blob_name = f"user_plans/{user_id}/{plan_id}.json"
+
+    await _upload_to_gcs(GCS_PLANS_BUCKET_NAME, plan_json_content, gcs_blob_name)
+    logger.info(f"Plano (ID: {plan_id}) armazenado no GCS em {gcs_blob_name}.")
+
+    async with await get_db_connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                INSERT INTO user_plans 
+                (id, user_id, thread_id, course_plan_id, gcs_blob_name)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (plan_id, user_id, thread_id, course_plan_id, gcs_blob_name)
+            )
+    logger.info(f"Metadados do plano (ID: {plan_id}, GCS: {gcs_blob_name}) salvos no DB.")
+    return str(plan_id)
 
 async def get_markdown_document(stored_doc_id: str) -> Optional[str]:
     """Recupera o conteúdo Markdown do GCS usando o ID do registro no DB."""
