@@ -68,6 +68,7 @@ class UCCapabilities(BaseModel):
 class UCEntry(BaseModel):
     nomeUC: str
     capacidades: UCCapabilities
+    conhecimentos: List[str] = Field(default_factory=list)
 
 class FullPlanDetailsResponse(BaseModel):
     stored_markdown_id: str
@@ -76,6 +77,8 @@ class FullPlanDetailsResponse(BaseModel):
     original_pdf_filename: Optional[str] = None
     nomeCurso: Optional[str] = None
     unidadesCurriculares: List[UCEntry] = Field(default_factory=list)
+    objetivo_uc: Optional[str] = None
+    referencias_bibliograficas: List[str] = Field(default_factory=list)
 
 class HorarioAula(BaseModel): # Novo modelo para representar os horários
     dia: str
@@ -86,6 +89,7 @@ class SituacaoAprendizagemInput(BaseModel):
     capacidades_tecnicas: List[str] = Field(default_factory=list)
     capacidades_socioemocionais: List[str] = Field(default_factory=list)
     estrategia: str # Ex: "situacao-problema", "projetos"
+    id: str
     tema_desafio: str # Usaremos como "tematica"
     
 # Corpo da requisição para gerar o plano de ensino, usando o ID do markdown armazenado
