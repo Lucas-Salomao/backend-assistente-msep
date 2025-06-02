@@ -109,11 +109,33 @@ async def create_user_configs_table(conn):
         logger.error(f"Erro ao criar/verificar tabela user_configs: {e}")
         raise
     
+async def create_user_plans_table(conn):
+    """Cria a tabela user_plans se ela não existir."""
+    try:
+        async with conn.cursor() as cur:
+            query = """
+            CREATE TABLE IF NOT EXISTS user_plans (
+                    id UUID PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    thread_id VARCHAR(255) NOT NULL,
+                    course_plan_id VARCHAR(255) NOT NULL,
+                    gcs_blob_name VARCHAR(1024) NOT NULL, -- Caminho para o arquivo no GCS
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """
+            await cur.execute(query)
+            logger.info("Tabela user_plans verificada/criada com sucesso")
+    except Exception as e:
+        logger.error(f"Erro ao criar/verificar tabela user_plans: {e}")
+        raise
+    
 async def setup_tables():
     """Cria a tabela necessária para o user_configs, se não existir."""
     try:
         conn = await get_checkpoint_connection()
         await create_user_configs_table(conn)  # Cria a tabela user_configs
+        await create_user_plans_table(conn) # Cria a tabela user_plans
         logger.info("Tabela do user_configs criada ou verificada com sucesso")
         await conn.close()
     except Exception as e:
@@ -195,7 +217,7 @@ TOOL_ARGUMENTS = {
 
 async def identify_tool(state: AgentState) -> AgentState:
     user_input = state["input"]
-    logger.info(f"Identificando ferramenta para input (comando): {user_input[:100]}...")
+    logger.info(f"Identificando ferramenta para input (comando): {user_input}...")
     
     current_messages = state.get("messages", []) # Preserva histórico de chat
     update_payload = {
@@ -273,7 +295,7 @@ async def generate_response(state: AgentState) -> AgentState:
     final_agent_response: str = ""
 
     # Se a ferramenta é uma das que já retorna o JSON formatado que queremos como "resposta da operação"
-    if current_tool_call in ["generate_teaching_plan"]:
+    if current_tool_call in ["generate_teaching_plan","extract_full_plan_details"]:
         if tool_result_from_state:
             try:
                 # Apenas valida se é JSON, mas a resposta do agente será a string JSON
@@ -281,7 +303,7 @@ async def generate_response(state: AgentState) -> AgentState:
                 final_agent_response = tool_result_from_state
                 logger.info(f"Usando tool_result diretamente como resposta para a ferramenta '{current_tool_call}'.")
             except json.JSONDecodeError as e:
-                logger.error(f"Tool_result da ferramenta '{current_tool_call}' não é JSON válido: {e}. Conteúdo: {tool_result_from_state[:200]}...")
+                logger.error(f"Tool_result da ferramenta '{current_tool_call}' não é JSON válido: {e}. Conteúdo: {tool_result_from_state}...")
                 final_agent_response = json.dumps({"error": f"Resultado inválido da ferramenta {current_tool_call}.", "details": str(e)})
         else:
             logger.warning(f"Nenhum tool_result para a ferramenta '{current_tool_call}'.")
@@ -370,7 +392,7 @@ async def run_agent(
     thread_id: str,
     initial_payload: Optional[Dict[str, Any]] = None
 ) -> Dict:
-    logger.info(f"Iniciando agente para user_id={user_id}, thread_id={thread_id}, input='{input_command_or_message[:100]}...'")
+    logger.info(f"Iniciando agente para user_id={user_id}, thread_id={thread_id}, input='{input_command_or_message}...'")
     await initialize_agent()
     config = {"configurable": {"thread_id": thread_id}, "metadata": {"user_id": user_id}}
     
@@ -455,7 +477,7 @@ async def run_agent(
     logger.debug(f"Estado inicial para a invocação do agente (thread {thread_id}): { {k: (str(v)[:100] + '...' if isinstance(v, str) and len(v) > 100 else v) for k, v in final_initial_state_for_agent.items()} }")
     result = await agent.ainvoke(final_initial_state_for_agent, config=config)
     
-    logger.info(f"Agente (thread {thread_id}) concluído. Resposta: '{str(result.get('response'))[:200]}...', Título: {result.get('title')}")
+    logger.info(f"Agente (thread {thread_id}) concluído. Resposta: '{str(result.get('response'))}...', Título: {result.get('title')}")
     return {
         "response": result.get("response"),
         "title": result.get("title"),
