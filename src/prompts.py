@@ -1,7 +1,7 @@
 modeloCabecalhoPlanoEnsino="""
 # Plano de Ensino segundo a MSEP
 
-## 1. Informações do Curso
+## Informações do Curso
 
 **Curso:** [Nome do curso]
 
@@ -21,31 +21,34 @@ modeloCabecalhoPlanoEnsino="""
 
 **Unidade:** [Escola Senai]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 modeloItem2CapacidadesSA="""
-## 2. Capacidades a serem desenvolvidas:
+## Capacidades a serem desenvolvidas:
 
-### 2.1 Capacidades Básicas [Somente para Módulo Básico]:
+### Capacidades Básicas [Somente para Módulo Básico]:
 
 [
     -Liste aqui todas as capacidades Básicas que foram passadas para o prompt, escolhidas pelo professor, independente da quantidade.
+    -Cada capacidade deve ficar em uma linha separada.
     -Caso não tenha sido passado nenhuma capacidade, escolha no máximo cinco capacidades básicas que são necessárias o desenvolvimento da situação de aprendizagem proposta.
     -Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades, quando escolhidas de forma automática e aleatória.
 ] 
 
-### 2.1 Capacidades Técnicas [Somente para Módulo Específico]:
+### Capacidades Técnicas [Somente para Módulo Específico]:
 
 [
     -Liste aqui todas as capacidades Técnicas que foram passadas para o prompt, escolhidas pelo professor, independente da quantidade.
+    -Cada capacidade deve ficar em uma linha separada.
     -Caso não tenha sido passado nenhuma capacidade, escolha no máximo cinco técnicas que são necessárias o desenvolvimento da situação de aprendizagem proposta.
     -Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de cinco capacidades, quando escolhidas de forma automática e aleatória.
 ]
 
-### 2.2 Capacidades Socioemocionais:
+### Capacidades Socioemocionais:
 
 [
     -Liste aqui todas as capacidades Socioemocionais que foram passadas para o prompt, escolhidas pelo professor, independente da quantidade.
+    -Cada capacidade deve ficar em uma linha separada.
     -Caso não tenha sido passado nenhuma capacidade, escolha no máximo três capacidades socioemocionais que são necessárias para o desenvolvimento da situação de aprendizagem proposta.
     Liste somente as capacidades escolhidas e nada mais, respeitado a quantiadade máximo de três capacidades, quando escolhidas de forma automática e aleatória.
 ]
@@ -58,25 +61,31 @@ modeloItem2CapacidadesSA="""
     - Escolher somente as capacidades que são necessárias para o desenvolvimento da situação de aprendizagem, de acordo com a unidade curricular do plano de curso, se atentando para não escolher todas as capacidades da unidade curricular.
 ]
 
-Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 modeloItem3ConhecimentosSA="""
-## 3. Conhecimentos:
+## Conhecimentos:
 
 [
     - Lista numerada com hierarquia de tópicos e sub-tópicos.
+    - Listar os conhecimentos, precedidos da numeração assim como aparecem no plano de curso.
+    - Cada conhecimento deve ficar em uma linha separada.
     - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
     - Escolher somente os conhecimentos que são necessários para o desenvolvimento da situação de aprendizagem, de acordo com as capacidades escolhidas no item 2, se atentando para não escolher todos os conhecimentos da unidade curricular em questão.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 
 modeloItem4EstrategiaSA_Base="""
-## 4. Estratégia de aprendizagem desafiadora: *{estrategia_nome_formatado}* [Indicar o tipo de estratégia de aprendizagem escolhida em itálico]
+## Estratégia de aprendizagem desafiadora: *{estrategia_nome_formatado}*
 
-**Nº de aulas previstas para desenvolver esta Situação de Aprendizagem:** [Estimar com base na complexidade, carga horária da UC e horários disponíveis. Ex: 10 aulas]
-**Carga horária prevista para o desenvolvimento desta Situação de Aprendizagem:** [Estimar em horas. Ex: 30 horas]
+[
+    Indicar o tipo de estratégia de aprendizagem escolhida em itálico
+]
+
+**Nº de aulas previstas para desenvolver esta Situação de Aprendizagem:** [Estimar com base na complexidade, carga horária da UC e horários disponíveis. Ex: 10 aulas]\n
+**Carga horária prevista para o desenvolvimento desta Situação de Aprendizagem:** [Estimar em horas. Ex: 30 horas]\n
 
 ### Título da Situação de Aprendizagem:
 [
@@ -85,7 +94,7 @@ modeloItem4EstrategiaSA_Base="""
 ]	
 
 {template_especifico_da_estrategia_aqui}
-Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.
+Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 modeloPlanoDeEnsinoSP="""
 [
@@ -136,7 +145,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 
 modeloPlanoDeEnsinoEC="""
@@ -208,7 +217,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 
 modeloPlanoDeEnsinoP="""
@@ -261,7 +270,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 
 modeloPlanoDeEnsinoPA="""
@@ -340,14 +349,14 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 
 modeloAvaliacaoAtual="""
 
-## 5. Critérios de Avaliação:
+## Critérios de Avaliação:
 [
-### 5.1 Critérios Dicotômicos
+### Critérios Dicotômicos
     
     Tabela contendo como título "### Instrumento de Registro" 
         Nome do aluno:_____________ \n
@@ -385,11 +394,11 @@ modeloAvaliacaoAtual="""
 
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
 modeloPlanoAula="""
 
-## 6. Plano de Aula:
+## Plano de Aula:
 [
     Tabela contendo como título "Plano de Aula"
     - Colulas:
@@ -428,9 +437,9 @@ modeloPlanoAula="""
 
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 
-## 7. Perguntas Mediadoras:
+## Perguntas Mediadoras:
 [
     - Elabore 5 pergundas mediadoras de acordo com a situação de aprendizagem propostas.
     - Considere as seguintes diretrizes para a elaboração de perguntas mediadoras, usando como base a Metodologia SENAI de Educação Profissional:
@@ -443,9 +452,9 @@ Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e dev
 """
 modeloPlanoAulaAtual="""
 
-## 6. Plano de Aula:
+## Plano de Aula:
 [
-    Tabela contendo como título "Plano de Aula"
+    Tabela contendo:
     - Colulas:
         -Nº horas/aula e data:
             [carga horária em horas e data da aula no formato (DD/MM/AAAA)]
@@ -481,20 +490,9 @@ modeloPlanoAulaAtual="""
     O Plano de Aula deve contemplar toda a carga horária e número de aulas previstas para o desenvolvimento da Situação de Aprendizagem. O plano deve conter exatamente a quantidade de carga horária e aulas previstas no Item 1. Informações do Curso. 
     
     Não utilizar a marcação <br> para quebra de linha
-    Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
-    
-| Horas/Aulas e Data                    | Capacidades     | Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação     | Instrumentos de Avaliação | Referências |
-|---------------------------------------|-----------------|---------------|-------------|----------------------------------|----------------------------|---------------------------|-------------|
-| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-| XX horas - DD/MM/AAAA (Dia da semana) |[capacidade]     |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-|                                       |                 |               |             |                                  |[Critério Dicotômico]&nbsp; |                           |             |
-    
+    Obedecer rigorosamente a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
+ 
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
 """
