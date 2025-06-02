@@ -4,6 +4,7 @@ import os
 from typing import Optional, List, Any, Dict # Adicionado Dict, Any
 from langchain_core.tools import tool
 import google.generativeai as genai # Ou sua forma preferida de acessar o LLM
+from google.generativeai.types import HarmCategory, HarmBlockThreshold # Para safety settings
 from src.document_store import get_markdown_document # Para buscar o Markdown
 from src.prompts import (
     modeloCabecalhoPlanoEnsino,
@@ -21,15 +22,23 @@ from src.prompts import (
 logger = logging.getLogger(__name__)
 
 # Função auxiliar para o LLM (pode ser movida para um utils)
-async def get_plan_generation_llm(model_name: str = os.getenv('MODEL_ID'), temperature: float = 0.7, initial_context: Optional[str] = None):
+async def get_plan_generation_llm(model_name: str = os.getenv('MODEL_ID'), temperature: float = 0.7):
     generation_config_dict = {
         "temperature": temperature, "top_p": 0.95, "max_output_tokens": 8192, # Max tokens para PRO
         "response_mime_type": "text/plain",
     }
+    # Configurações de segurança - ajuste conforme necessário
+    safety_settings = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    }
     return genai.GenerativeModel(
         model_name=model_name,
         generation_config=generation_config_dict,
-        system_instruction="Você é um especialista em educação do Senai que elabora Planos de Ensino detalhados e bem estruturados, seguindo a Metodologia SENAI de Educação Profissional (MSEP). Tome como base o conteúdo do plano de curso do documento {initial_context}",
+        system_instruction="Você é um especialista em educação do Senai que elabora Planos de Ensino detalhados e bem estruturados, seguindo a Metodologia SENAI de Educação Profissional (MSEP). Tome como base o conteúdo do plano de curso anexado. As instruções entre colchetes são orientações específicas para você seguir e não devem aparecer no documento final. Avalie antes de gerar o documento final.",
+        safety_settings=safety_settings
     )
     
 def format_horarios_for_plano_aula(horarios: List[Dict[str,str]]) -> str:
@@ -73,7 +82,7 @@ async def generate_teaching_plan(
     horarios_param: List[Dict[str,str]] = None
 ) -> str:
     """Gera um plano de ensino detalhado com base no conteúdo Markdown armazenado e parâmetros fornecidos."""
-    logger.info(f"Tool: generate_teaching_plan chamada para stored_id: {stored_markdown_id}, UC: {nome_uc}, Estratégia: {estrategia}")
+    logger.info(f"Tool: generate_teaching_plan chamada para stored_id: {stored_markdown_id}, UC: {nome_uc}")
     if horarios_param is None:
         horarios_param = []
 
@@ -85,7 +94,19 @@ async def generate_teaching_plan(
 
     final_plan_markdown_parts: List[str] = []
     try:
-        llm = await get_plan_generation_llm(markdown_content)
+        llm = await get_plan_generation_llm()
+        model = await get_plan_generation_llm()
+        
+        contexto_inicial_chat = (
+            f"Aqui está o conteúdo do Plano de Curso desta UC, que deve servir como base para as informações gerais e "
+            f"para a seleção de capacidades e conhecimentos específicos para cada Situação de Aprendizagem (SA):\n\n"
+            f"{markdown_content}\n"
+            f"Por favor, gere as seções do Plano de Ensino conforme eu for solicitado, "
+            f"seguindo os templates e instruções específicas para cada seção. Náo"
+        )
+        chat_session = model.start_chat(history=[
+            {'role': 'user', 'parts': [{'text': contexto_inicial_chat}]}
+        ])
         
         # --- ETAPA 1: Gerar Cabeçalho Geral (Item 1) ---
         logger.info("Gerando Item 1: Cabeçalho Geral do Plano de Ensino...")
@@ -103,8 +124,9 @@ async def generate_teaching_plan(
             f"- Unidade Operacional (Escola): {unidade_operacional}\n"
             f"Use o seguinte template para o Item 1:\n{modeloCabecalhoPlanoEnsino}"
         )
-        response_cabecalho = await llm.generate_content_async(prompt_cabecalho)
-        final_plan_markdown_parts.append(response_cabecalho.text.strip())
+        # response_item1 = await llm.generate_content_async(prompt_cabecalho)
+        response_item1 = await chat_session.send_message_async(prompt_cabecalho)
+        final_plan_markdown_parts.append(response_item1.text.strip())
         logger.info("Item 1: Cabeçalho Geral gerado.")
 
         # --- ETAPA 2: Loop por cada Situação de Aprendizagem ---
@@ -119,21 +141,23 @@ async def generate_teaching_plan(
 
             # Gerar Item 2 (Capacidades) para esta SA
             logger.info(f"SA {sa_num}: Gerando Item 2 (Capacidades)...")
-            prompt_item2 = f"Elabore somente o Item 2 seguindo o template {modeloItem2CapacidadesSA}" + f"Utilize as seguintes capacidades técnicas/básicas: {sa_capacidades_tecnicas}.\n" + f"Utilize as seguintes capacidades socioemocionais: {sa_capacidades_socioemocionais}.\n"	
+            prompt_item2 = f"Preencha somente o Item 2 seguindo o template {modeloItem2CapacidadesSA}" + f"Utilize as seguintes capacidades técnicas/básicas: {sa_capacidades_tecnicas}.\n" + f"Utilize as seguintes capacidades socioemocionais: {sa_capacidades_socioemocionais}.\n" + f"Inicie com: \n\n# Situação de Aprendizagem {sa_num}"	
             # Não precisa de LLM aqui se o template for apenas para formatação dos dados já recebidos.
             # Se o LLM for popular algo mais, então a chamada seria necessária.
             # Por simplicidade, vamos preencher diretamente.
             # Adaptação: O LLM pode reescrever ou validar, então uma chamada leve pode ser útil.
             # prompt_item2_llm = f"Formate as seguintes capacidades no padrão do Item 2 do plano de ensino, usando o template abaixo. Capacidades Técnicas a incluir: {sa_capacidades_tecnicas}. Capacidades Socioemocionais a incluir: {sa_capacidades_socioemocionais}.\n\nTEMPLATE:\n{modeloItem2CapacidadesSA}"
-            response_item2 = await llm.generate_content_async(response_cabecalho+prompt_item2) # Chamada para garantir formatação e consistência
+            # response_item2 = await llm.generate_content_async(response_item1+prompt_item2) # Chamada para garantir formatação e consistência
+            response_item2 = await chat_session.send_message_async(prompt_item2)
             item2_content = response_item2.text.strip()
             final_plan_markdown_parts.append(item2_content)
             logger.info(f"SA {sa_num}: Item 2 (Capacidades) gerado.")
             
             # Gerar Item 3 (Conhecimentos) para esta SA
             logger.info(f"SA {sa_num}: Gerando Item 3 (Conhecimentos)...")
-            prompt_item3 = f"Elabore somente o Item 3 seguinte o template {modeloItem3ConhecimentosSA} considerando os conhecimentos da unidade curriculas {nome_uc} contidas no plano de curso."
-            response_item3 = await llm.generate_content_async(response_item2+prompt_item3)
+            prompt_item3 = f"Preencha somente o Item 3 seguinte o template {modeloItem3ConhecimentosSA} considerando os conhecimentos da unidade curricular {nome_uc} contidas no plano de curso."
+            # response_item3 = await llm.generate_content_async(response_item2+prompt_item3)
+            response_item3 = await chat_session.send_message_async(prompt_item3)
             item3_content = response_item3.text.strip()
             final_plan_markdown_parts.append(item3_content)
             logger.info(f"SA {sa_num}: Item 3 (Conhecimentos) gerado.")
@@ -151,11 +175,12 @@ async def generate_teaching_plan(
                     template_especifico_da_estrategia_aqui=conteudo_especifico_estrategia
                 )
                 prompt_item4_llm = (
-                    f"Elabore somente o item 4 (Estratégia de Aprendizagem Desafiadora) do plano de ensino."
+                    f"Preencha somente o item 4 (Estratégia de Aprendizagem Desafiadora) do plano de ensino."
                     f"Leve em consideração a temática da Situação de Aprendizagem: '{sa_tematica}' e as capacidades e conhecimentos elaborados anteriormente."
                     f"Use o seguinte template:\n{prompt_item4}\n"
                 )
-                response_item4 = await llm.generate_content_async(item3_content+prompt_item4_llm)
+                # response_item4 = await llm.generate_content_async(item3_content+prompt_item4_llm)
+                response_item4 = await chat_session.send_message_async(prompt_item4_llm)
                 item4_content = response_item4.text.strip()
                 final_plan_markdown_parts.append(item4_content)
                 contexto_estrategia_atual = item4_content # Para usar nos próximos itens
@@ -164,15 +189,16 @@ async def generate_teaching_plan(
             # Gerar Item 5 (Avaliação) para esta SA
             logger.info(f"SA {sa_num}: Gerando Item 5 (Avaliação)...")
             prompt_item5 = (
-                f"Com base na Situação de Aprendizagem elaborada anteriormente, descrita abaixo:\n"
-                f"\n{contexto_estrategia_atual}\n\n"
-                f"Considere os conhecimentos definidos para esta SA:\n"
-                f"{item3_content}\n\n"
-                f"Considere as capacidades definidas para esta SA: "
-                f"Técnicas: {sa_capacidades_tecnicas}; Socioemocionais: {sa_capacidades_socioemocionais}.\n"
-                f"Elabore somente o Item 5 (Critérios de Avaliação para esta Situação de Aprendizagem) usando o template:\n{modeloAvaliacaoAtual}"
+                # f"Com base na Situação de Aprendizagem elaborada anteriormente, descrita abaixo:\n"
+                # f"\n{contexto_estrategia_atual}\n\n"
+                # f"Considere os conhecimentos definidos para esta SA:\n"
+                # f"{item3_content}\n\n"
+                # f"Considere as capacidades definidas para esta SA: "
+                # f"Técnicas: {sa_capacidades_tecnicas}; Socioemocionais: {sa_capacidades_socioemocionais}.\n"
+                f"Preencha somente o Item 5 (Critérios de Avaliação para esta Situação de Aprendizagem) usando o template:\n{modeloAvaliacaoAtual}"
             )
-            response_item5 = await llm.generate_content_async(prompt_item5)
+            # response_item5 = await llm.generate_content_async(prompt_item5)
+            response_item5 = await chat_session.send_message_async(prompt_item5)
             item5_content = response_item5.text.strip()
             final_plan_markdown_parts.append(item5_content)
             contexto_avaliacao_atual = item5_content
@@ -184,18 +210,19 @@ async def generate_teaching_plan(
             horarios_texto = "\n".join([f"- {h['dia']} das {h['horaInicio']} às {h['horaFim']}" for h in horarios_param]) if horarios_param else "Não fornecidos."
             
             prompt_item6 = (
-                f"Para a Situação de Aprendizagem elaborada anteriormente e descrita abaixo:\n"
-                f"{contexto_estrategia_atual}\n\n"
-                f"Considere os conhecimentos definidos para esta SA:\n"
-                f"{item3_content}\n\n"
-                f"Considere as capacidades definidas para esta SA: "
-                f"Técnicas: {sa_capacidades_tecnicas}; Socioemocionais: {sa_capacidades_socioemocionais}.\n"
-                f"Considere os Critérios de Avaliação:\n"
-                f"{contexto_avaliacao_atual}\n"
+                # f"Para a Situação de Aprendizagem elaborada anteriormente e descrita abaixo:\n"
+                # f"{contexto_estrategia_atual}\n\n"
+                # f"Considere os conhecimentos definidos para esta SA:\n"
+                # f"{item3_content}\n\n"
+                # f"Considere as capacidades definidas para esta SA: "
+                # f"Técnicas: {sa_capacidades_tecnicas}; Socioemocionais: {sa_capacidades_socioemocionais}.\n"
+                # f"Considere os Critérios de Avaliação:\n"
+                # f"{contexto_avaliacao_atual}\n"
                 f"Considerando os horários gerais disponíveis para a UC: {horarios_texto}\n"
-                f"Elabore somente o Item 6 (Plano de Aula ), incluindo as Perguntas Mediadoras (Item 7), usando o template:\n{modeloPlanoAulaAtual}"
+                f"Preencha somente o Item 6 (Plano de Aula)usando o template:\n{modeloPlanoAulaAtual}"
             )
-            response_item6 = await llm.generate_content_async(prompt_item6)
+            # response_item6 = await llm.generate_content_async(prompt_item6)
+            response_item6= await chat_session.send_message_async(prompt_item6)
             item6_content = response_item6.text.strip()
             final_plan_markdown_parts.append(item6_content)
             logger.info(f"SA {sa_num}: Item 6 (Plano de Aula) gerado.")
