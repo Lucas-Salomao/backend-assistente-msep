@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from psycopg import AsyncConnection  # Adiciona esta importação
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from .agent import run_agent, get_checkpoint_connection, setup_tables, setup_checkpointer
-from .document_store import setup_document_storage, store_markdown_document
+from .document_store import setup_document_storage, store_markdown_document, store_plan_document
 from .pdf_processor import convert_pdf_to_markdown
 import json # Para carregar strings JSON
 import uuid # Para gerar IDs
@@ -23,6 +23,7 @@ from .models.models import (
     PlanGenerationBodyWithStoredId, PlanGenerationResponse,
     SituacaoAprendizagemInput
 )
+from src.utils.utils import convert_markdown_to_json
 
 # Importa a middleware CORS <<<<<<----- ADICIONADO
 from fastapi.middleware.cors import CORSMiddleware
@@ -172,6 +173,9 @@ async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
             autocommit=True
         ) as conn:
             async with conn.cursor() as cur:
+                # Define the pattern for the LIKE clause separately
+                thread_id_exclude_pattern = "op_extract_full_plan_details%"
+                
                 query = """
                 SELECT thread_id, (metadata->'writes'->'generate_title'->>'title') AS title
                 FROM (
@@ -180,9 +184,10 @@ async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
                     FROM checkpoints
                     WHERE (metadata->>'user_id') = %s
                 ) t
-                WHERE rn = 1;
+                WHERE rn = 1
+                AND thread_id NOT LIKE %s;
                 """
-                await cur.execute(query, (body.userId,))
+                await cur.execute(query, (body.userId,thread_id_exclude_pattern))
                 threads = [
                     ThreadInfo(thread_id=row[0], title=row[1])
                     async for row in cur
@@ -280,14 +285,15 @@ async def pdf_extract_full_plan_details(
     try:
         markdown_content = await convert_pdf_to_markdown(file)
         
-        # Armazena o documento e associa ao user_id e thread_id originais
-        stored_doc_id = await store_markdown_document(
-            user_id=user_id,
-            thread_id=thread_id, # Associa o documento armazenado ao thread_id da conversa principal
-            markdown_content=markdown_content,
-            original_pdf_filename=effective_filename
-        )
-        logger.info(f"Markdown para '{effective_filename}' ({operation_description}) armazenado com ID: {stored_doc_id}")
+        stored_doc_id = None
+        # # Armazena o documento e associa ao user_id e thread_id originais
+        # stored_doc_id = await store_markdown_document(
+        #     user_id=user_id,
+        #     thread_id=thread_id, # Associa o documento armazenado ao thread_id da conversa principal
+        #     markdown_content=markdown_content,
+        #     original_pdf_filename=effective_filename
+        # )
+        # logger.info(f"Markdown para '{effective_filename}' ({operation_description}) armazenado com ID: {stored_doc_id}")
 
         # Cria um thread_id único para a operação do agente LangGraph (não polui o histórico da conversa principal)
         agent_operation_thread_id = f"op_{operation_description}_{uuid.uuid4().hex[:12]}"
@@ -311,11 +317,25 @@ async def pdf_extract_full_plan_details(
             logger.error(f"Agente não retornou resposta para {operation_description} (file: {effective_filename})")
             raise HTTPException(status_code=500, detail="Agente não retornou os detalhes completos do plano extraído.")
         
-        extracted_details = json.loads(full_details_json_str)
-        if "error" in extracted_details:
-            error_detail = extracted_details.get('details', extracted_details.get('error', 'Erro desconhecido da ferramenta'))
-            logger.error(f"Erro da ferramenta {operation_description} (file: {effective_filename}): {error_detail}")
-            raise HTTPException(status_code=500, detail=f"Falha na extração dos detalhes: {error_detail}")
+        logger.debug(f"Tentando fazer parse do JSON retornado pela ferramenta: {full_details_json_str}") # LOG ADICIONADO
+        try:
+            extracted_details = json.loads(full_details_json_str)
+            # Armazena o documento e associa ao user_id e thread_id originais
+            stored_doc_id = await store_markdown_document(
+                user_id=user_id,
+                thread_id=thread_id, # Associa o documento armazenado ao thread_id da conversa principal
+                markdown_content=full_details_json_str,
+                original_pdf_filename=effective_filename
+            )
+            logger.info(f"Markdown para '{effective_filename}' ({operation_description}) armazenado com ID: {stored_doc_id}")    
+        except json.JSONDecodeError as json_err:
+            logger.error(f"Resposta da ferramenta {operation_description} não é JSON válido: {full_details_json_str}... Erro: {json_err}") # Log mais longo
+            raise HTTPException(status_code=500, detail=f"Resposta inválida da ferramenta de extração: {json_err}")
+        # extracted_details = json.loads(full_details_json_str)
+        # if "error" in extracted_details:
+        #     error_detail = extracted_details.get('details', extracted_details.get('error', 'Erro desconhecido da ferramenta'))
+        #     logger.error(f"Erro da ferramenta {operation_description} (file: {effective_filename}): {error_detail}")
+        #     raise HTTPException(status_code=500, detail=f"Falha na extração dos detalhes: {error_detail}")
 
         return FullPlanDetailsResponse(
             stored_markdown_id=stored_doc_id,
@@ -396,6 +416,13 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
             logger.error(f"Erro da ferramenta {operation_description} (stored_id: {body.stored_markdown_id}): {error_detail}")
             raise HTTPException(status_code=500, detail=f"Falha na geração do plano: {error_detail}")
 
+        # plan_json_str = await convert_markdown_to_json(plan_data.get("plan_markdown"))
+        # store_plan_document_id = await store_plan_document(
+        #     user_id=body.user_id,
+        #     thread_id=body.thread_id,  # Associa o plano ao thread_id da conversa principal
+        #     plan_json_content=plan_json_str,
+        #     course_plan_id=body.stored_markdown_id, # ID do documento original associado
+        # )
         return PlanGenerationResponse(
             userId=body.user_id,
             threadId=body.thread_id, # Retorna o thread_id da conversa original associada
@@ -407,6 +434,28 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
     except Exception as e:
         logger.error(f"Erro inesperado em /{operation_description} (stored_id: {body.stored_markdown_id}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erro interno ao gerar plano de ensino: {str(e)}")
+    
+@app.post("/get_plans", response_model=dict)
+async def get_plans(body: dict):
+    try:
+        user_id = body.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id é obrigatório")
+        logger.info(f"Endpoint get_plans solicitado para user_id: {user_id}")
+        async with await AsyncConnection.connect(
+            f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
+            autocommit=True
+        ) as conn:
+            async with conn.cursor() as cur:
+                query = """
+                SELECT id FROM user_plans WHERE user_id = %s
+                """
+                await cur.execute(query, (user_id,))
+                plan_ids = [row[0] async for row in cur]
+        return {"user_id": user_id, "plan_ids": plan_ids}
+    except Exception as e:
+        logger.error(f"Erro ao recuperar planos: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
  
 if __name__ == "__main__":
     import uvicorn
