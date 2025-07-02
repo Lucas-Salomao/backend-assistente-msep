@@ -14,12 +14,21 @@ import vertexai
 import json
 from src.models.models import SituacaoAprendizagemInput
 
+# --- Lógica para criar a pasta de logs ---
+# 2. Defina o nome do diretório e o caminho completo do arquivo de log
+LOG_DIR = "logs"
+LOG_FILE = os.path.join(LOG_DIR, "msep.log")
+
+# 3. Crie o diretório de logs se ele não existir
+os.makedirs(LOG_DIR, exist_ok=True)
+# O argumento exist_ok=True garante que nenhum erro será lançado se a pasta já existir.
+
 # Configuração do logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("logs/msep.log", encoding= 'utf-8'),  # Salva logs em logs/app.log
+        logging.FileHandler(LOG_FILE, encoding= 'utf-8'),  # Salva logs em logs/app.log
         logging.StreamHandler()               # Exibe logs no console
     ]
 )
@@ -153,8 +162,8 @@ Retorne o resultado sem modificações. Não adicione notação de bloco de cód
 """)
 
 title_prompt = PromptTemplate.from_template("""
-Com base no input do usuário e na resposta do sistema, gere um título curto e descritivo para esta conversa.
-O título deve ser conciso (no máximo 7 palavras) e capturar a essência do assunto discutido.
+Com base no input do usuário e na resposta do sistema, gere um único título curto e descritivo para esta conversa.
+O título deve ser conciso (no máximo 7 palavras), objetivo e capturar a essência do assunto discutido. Não gere sugestões de títulos, gere apenas o título conforme diretrizes.
 
 Input do usuário: {input}
 Resposta do sistema: {response}
@@ -396,40 +405,29 @@ async def run_agent(
     await initialize_agent()
     config = {"configurable": {"thread_id": thread_id}, "metadata": {"user_id": user_id}}
     
-    previous_state_values = {}
+    current_state_dict = {}
     if not initial_payload:
         previous_state_tuple = await agent.aget_state(config)
         if previous_state_tuple:
-            previous_state_values = previous_state_tuple.values
+            current_state_dict = previous_state_tuple.values
             logger.info(f"Estado anterior recuperado para thread_id={thread_id}")
         else:
             logger.info(f"Nenhum estado anterior encontrado para thread_id={thread_id}, iniciando novo.")
 
-    initial_messages = previous_state_values.get("messages", [])
-    current_title = previous_state_values.get("title")
+    initial_messages = current_state_dict.get("messages", [])
+    current_title = current_state_dict.get("title")
     
     # Cria um dicionário com todos os campos esperados por AgentState e seus tipos default/None
-    current_state_dict: Dict[str, Any] = {
-        "input": input_command_or_message, # ATRIBUI o input_command_or_message ao campo 'input' do estado
+    current_state_dict.update({
+        "input": input_command_or_message,
         "user_id": user_id,
-        "thread_id": thread_id,
         "tool_call": None,
         "tool_result": None,
         "response": None,
-        "title": current_title,
-        "messages": initial_messages,
-        "pdf_markdown_content": None,
-        "stored_markdown_id": None,
-        "plan_docente": None,
-        "plan_unidade_operacional": None,
-        "plan_nome_curso": None,
-        "plan_turma": None,
-        "plan_nome_uc": None,
-        "plan_situacoes_aprendizagem": [],
-        "plan_horarios": [],
-        "plan_extracted_data": None,
-    }
-    current_state_dict.update(previous_state_values)
+    })
+    
+    if "messages" not in current_state_dict:
+        current_state_dict["messages"] = []
 
     if initial_payload:
         logger.info(f"Aplicando initial_payload ao estado: {list(initial_payload.keys())}")
