@@ -98,7 +98,7 @@ async def generate_teaching_plan(
         model = await get_plan_generation_llm()
         
         contexto_inicial_chat = (
-            f"Aqui está o conteúdo do Plano de Curso desta UC, que deve servir como base para as informações gerais e "
+            f"Aqui está o conteúdo do Plano de Curso desta Unidade Curricular (UC), que deve servir como base para as informações gerais e "
             f"para a seleção de capacidades e conhecimentos específicos para cada Situação de Aprendizagem (SA):\n\n"
             f"{markdown_content}\n"
             f"Por favor, gere as seções do Plano de Ensino conforme eu for solicitado, "

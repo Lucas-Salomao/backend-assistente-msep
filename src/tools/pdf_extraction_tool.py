@@ -60,6 +60,7 @@ async def _extract_capabilities_for_single_uc(llm: genai.GenerativeModel, markdo
         prompt_tec = f"""{markdown_content}
 
 Extraia APENAS as capacidades técnicas (ou básicas) da Unidade Curricular '{uc_name}'.
+Dependendo do plano de curso, as capacidades técnicas podem ser chamadas de "capacidades técnicas", "capacidades básicas", "competências técnicas" ou "FUNDAMENTOS TÉCNICOS CIENTÍFICOS". Avalie cada caso para identificar corretamente as capacidades técnicas do plano de curso. 
 
 INSTRUÇÕES IMPORTANTES:
 - Retorne apenas as capacidades na íntegra como aparecem no plano de curso, uma por linha.
@@ -77,6 +78,7 @@ Capacidades técnicas:"""
         prompt_soc = f"""{markdown_content}
 
 Extraia APENAS as capacidades socioemocionais da Unidade Curricular '{uc_name}'.
+Dependendo do plano de curso, as capacidades socioemocionais podem ser chamadas de "capacidades sociais", "capacidades organizativas" ou "capacidades metodológicas". Dependendo do plano, podem conter as 3 separadamente, mas considere tudo como capacidades socioemocionais. Avalie cada caso para identificar corretamente as capacidades socioemocionais do plano de curso.
 
 INSTRUÇÕES IMPORTANTES:
 - Retorne apenas as capacidades na íntegra como aparecem no plano de curso, uma por linha.
