@@ -45,4 +45,4 @@ async def convert_markdown_to_json(markdown_str: str):
     prompt_convert = f"Converta para uma string JSON o markdown abaixo: {markdown_str}"
     json_str=await llm.generate_content_async(prompt_convert)
     
-    return json_str
+    return json_str.text

@@ -104,3 +104,10 @@ class PlanGenerationBodyWithStoredId(BaseModel):
     uc: str
     situacoes_aprendizagem: List[SituacaoAprendizagemInput] = Field(default_factory=list)
     horarios: List[HorarioAula] = Field(default_factory=list)
+
+class GetPlansRequest(BaseModel):
+    user_id: str = Field(..., description="ID do usuário para buscar os planos.", example="user_abc_12345")
+
+class GetPlansResponse(BaseModel):
+    user_id: str
+    plan_ids: List[str]

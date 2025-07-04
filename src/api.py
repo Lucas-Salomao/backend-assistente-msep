@@ -21,7 +21,8 @@ from .models.models import (
     ModelConfigRequest,
     FullPlanDetailsResponse,
     PlanGenerationBodyWithStoredId, PlanGenerationResponse,
-    SituacaoAprendizagemInput
+    SituacaoAprendizagemInput,
+    GetPlansRequest, GetPlansResponse,
 )
 from src.utils.utils import convert_markdown_to_json
 
@@ -416,13 +417,13 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
             logger.error(f"Erro da ferramenta {operation_description} (stored_id: {body.stored_markdown_id}): {error_detail}")
             raise HTTPException(status_code=500, detail=f"Falha na geração do plano: {error_detail}")
 
-        # plan_json_str = await convert_markdown_to_json(plan_data.get("plan_markdown"))
-        # store_plan_document_id = await store_plan_document(
-        #     user_id=body.user_id,
-        #     thread_id=body.thread_id,  # Associa o plano ao thread_id da conversa principal
-        #     plan_json_content=plan_json_str,
-        #     course_plan_id=body.stored_markdown_id, # ID do documento original associado
-        # )
+        plan_json_str = await convert_markdown_to_json(plan_data.get("plan_markdown"))
+        store_plan_document_id = await store_plan_document(
+            user_id=body.user_id,
+            thread_id=body.thread_id,  # Associa o plano ao thread_id da conversa principal
+            plan_json_content=plan_json_str,
+            course_plan_id=body.stored_markdown_id, # ID do documento original associado
+        )
         return PlanGenerationResponse(
             userId=body.user_id,
             threadId=body.thread_id, # Retorna o thread_id da conversa original associada
@@ -435,12 +436,12 @@ async def generate_teaching_plan( # Nome do endpoint corrigido
         logger.error(f"Erro inesperado em /{operation_description} (stored_id: {body.stored_markdown_id}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erro interno ao gerar plano de ensino: {str(e)}")
     
-@app.post("/get_plans", response_model=dict)
-async def get_plans(body: dict):
+@app.post("/get_plans", response_model=GetPlansResponse)
+async def get_plans(body: GetPlansRequest):
     try:
-        user_id = body.get("user_id")
-        if not user_id:
-            raise HTTPException(status_code=400, detail="user_id é obrigatório")
+        user_id = body.user_id
+        # if not user_id:
+        #     raise HTTPException(status_code=400, detail="user_id é obrigatório")
         logger.info(f"Endpoint get_plans solicitado para user_id: {user_id}")
         async with await AsyncConnection.connect(
             f"postgresql://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}",
@@ -451,7 +452,7 @@ async def get_plans(body: dict):
                 SELECT id FROM user_plans WHERE user_id = %s
                 """
                 await cur.execute(query, (user_id,))
-                plan_ids = [row[0] async for row in cur]
+                plan_ids = [str(row[0]) async for row in cur]
         return {"user_id": user_id, "plan_ids": plan_ids}
     except Exception as e:
         logger.error(f"Erro ao recuperar planos: {str(e)}")
