@@ -5,7 +5,8 @@ from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated, Optional, List, Dict, Any, cast
 from langgraph.prebuilt import ToolExecutor
 from src.tools import tools
-from langchain_google_genai import ChatGoogleGenerativeAI
+import vertexai
+from langchain_google_vertexai import ChatVertexAI
 from google.cloud import aiplatform
 from langchain_core.prompts import PromptTemplate
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -35,6 +36,15 @@ logger = logging.getLogger(__name__)
 
 # Carrega variáveis do .env
 load_dotenv()
+
+if os.getenv("PROJECT_ID"):
+    vertexai.init(project=os.getenv("PROJECT_ID"), location=os.getenv("LOCATION", "us-central1"))
+else:
+    logger.warning("PROJECT_ID não definido no ambiente.")
+    
+# Verifica as credenciais
+if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+    raise EnvironmentError("Credenciais do Google Cloud não encontradas!")
 
 STRING_POSTGRES="postgresql://"+os.getenv("PG_USER")+":"+os.getenv("PG_PASSWORD")+"@"+os.getenv("PG_HOST")+":"+os.getenv("PG_PORT")+"/"+os.getenv("PG_DATABASE")
 
@@ -67,12 +77,14 @@ async def get_user_config(user_id: str):
 # llm será criado por requisição
 async def get_llm(user_id: str):
     config = await get_user_config(user_id)
-    return ChatGoogleGenerativeAI(
-        model=os.getenv("MODEL_ID"),  # Parâmetro agora é "model"
+    return ChatVertexAI(
+        model_name=os.getenv("MODEL_ID"), # O parâmetro é 'model_name'
+        project=os.getenv("PROJECT_ID"),
+        location=os.getenv("LOCATION", "us-central1"),
         temperature=config["temperature"],
         top_p=config["top_p"],
-        max_output_tokens=8192,
-        convert_system_message_to_human=True  # Boa prática para prompts de sistema
+        max_output_tokens=8192
+        # Note que não há 'convert_system_message_to_human' aqui
     )
 
 # Configuração do checkpointer com asyncpg

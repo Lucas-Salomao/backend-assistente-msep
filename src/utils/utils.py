@@ -1,6 +1,6 @@
 import logging
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 # Configuração do logging
@@ -14,8 +14,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-json_converter_llm = ChatGoogleGenerativeAI(
-    model=os.getenv("MODEL_ID"),
+json_converter_llm = ChatVertexAI(
+    model_name=os.getenv("MODEL_ID"),
     temperature=0.1, # Temperatura baixa para respostas previsíveis
     top_p=0.95,
     max_output_tokens=8192

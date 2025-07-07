@@ -3,7 +3,7 @@ import json
 import os
 from typing import Optional, List, Any, Dict # Adicionado Dict, Any
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from src.document_store import get_markdown_document # Para buscar o Markdown
 from src.prompts import (
@@ -22,8 +22,8 @@ from src.prompts import (
 logger = logging.getLogger(__name__)
 
 # Função auxiliar para o LLM (pode ser movida para um utils)
-creative_llm = ChatGoogleGenerativeAI(
-    model=os.getenv('MODEL_ID'),
+creative_llm = ChatVertexAI(
+    model_name=os.getenv('MODEL_ID'),
     temperature=0.7,
     top_p=0.95,
     max_output_tokens=8192,

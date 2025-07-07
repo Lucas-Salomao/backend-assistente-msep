@@ -2,14 +2,10 @@ from langchain_core.tools import tool
 import logging
 import os
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 load_dotenv()
-
-# Verifica as credenciais
-if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-    raise EnvironmentError("Credenciais do Google Cloud não encontradas!")
 
 # Função para ler o conteúdo do arquivo Markdown
 def read_markdown_file(file_path):
@@ -36,8 +32,8 @@ Aqui está o conteúdo da metodologia SENAI que você deve usar como referência
 """
 
 
-chat_llm = ChatGoogleGenerativeAI(
-    model=os.getenv("MODEL_ID"),
+chat_llm = ChatVertexAI(
+    model_name=os.getenv("MODEL_ID"),
     temperature=0.1,
     max_output_tokens=8192,
 )

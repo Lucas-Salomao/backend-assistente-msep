@@ -3,7 +3,7 @@ import json
 import os
 from typing import Optional, List, Dict, Any # Adicionado Dict, Any
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import SystemMessage, HumanMessage
 import asyncio # Para chamadas concorrentes ao LLM para capacidades
 
@@ -11,8 +11,8 @@ instrucao_sistema = "Você é um assistente eficiente em extrair informações e
 
 logger = logging.getLogger(__name__)
 
-extraction_llm = ChatGoogleGenerativeAI(
-        model=os.getenv("MODEL_ID"),
+extraction_llm = ChatVertexAI(
+        model_name=os.getenv("MODEL_ID"),
         temperature=0.1,
         top_p=0.95,
         max_output_tokens=8192,
@@ -45,7 +45,7 @@ def sanitize_text(text: str) -> str:
 
     return text
 
-async def _extract_capabilities_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> Dict[str, List[str]]:
+async def _extract_capabilities_for_single_uc(llm: ChatVertexAI, markdown_content: str, uc_name: str) -> Dict[str, List[str]]:
     """Função auxiliar para extrair capacidades de uma única UC."""
     logger.debug(f"Extraindo capacidades para UC: {uc_name}")
     cap_details = {
@@ -104,7 +104,7 @@ Capacidades socioemocionais:"""
     
     return cap_details
 
-async def _extract_knowledge_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_knowledge_for_single_uc(llm: ChatVertexAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair conhecimentos de uma única UC."""
     logger.debug(f"Extraindo conhecimentos para UC: {uc_name}")
     knowledge_list: List[str] = []
@@ -139,7 +139,7 @@ Conhecimentos:"""
 
     return knowledge_list
 
-async def _extract_objective_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> Optional[str]:
+async def _extract_objective_for_single_uc(llm: ChatVertexAI, markdown_content: str, uc_name: str) -> Optional[str]:
     """Função auxiliar para extrair o objetivo de uma única UC."""
     logger.debug(f"Extraindo objetivo para UC: {uc_name}")
     objective: Optional[str] = None
@@ -171,7 +171,7 @@ Objetivo da Unidade Curricular '{uc_name}':"""
 
     return objective
 
-async def _extract_references_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_references_for_single_uc(llm: ChatVertexAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair referências bibliográficas de uma única UC."""
     logger.debug(f"Extraindo referências bibliográficas para UC: {uc_name}")
     references_list: List[str] = []
@@ -203,7 +203,7 @@ Referências Bibliográficas da Unidade Curricular '{uc_name}':"""
 
     return references_list
 
-async def _extract_workload_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_workload_for_single_uc(llm: ChatVertexAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair a carga horária total de uma única UC."""
     logger.debug(f"Extraindo carga horária para UC: {uc_name}")
     workload: str = ""
@@ -233,7 +233,7 @@ Carga horária total '{uc_name}':"""
 
     return workload
 
-async def _extract_module_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_module_for_single_uc(llm: ChatVertexAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair o tipo de módulo de uma única UC."""
     logger.debug(f"Extraindo o tipo de módulo: {uc_name}")
     module: str = ""

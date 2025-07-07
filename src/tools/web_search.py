@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 import logging
-import google.generativeai as genai
+from langchain_google_vertexai import ChatVertexAI
+from langchain_core.messages import SystemMessage, HumanMessage
 import os
 from dotenv import load_dotenv
 import vertexai
@@ -20,20 +21,13 @@ if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
 system_instruction_generico = """Você é uma ferramenta genérica para buscar informações na Internet, entretanto, quando o assunto for relacionado a busca de cursos, treinamentos, capacitações, vagas e oportunidades de estudo, buscará somente informações sobre o SENAI. Não buscará de nenhuma outra instituição. Se possível retorne links de referências para que o usuário possa navegar."""
 
 
-model_generico = GenerativeModel(
-    "gemini-1.5-flash-002",
-    system_instruction=system_instruction_generico,  # Instruções de sistema diretamente no modelo
+chat_llm = ChatVertexAI(
+    model_name=os.getenv("MODEL_ID"),
+    temperature=0.1,
+    max_output_tokens=8192,
 )
 
-# Use Google Search for grounding
-tool_search = Tool.from_google_search_retrieval(
-    grounding.GoogleSearchRetrieval(
-        # Optional: For Dynamic Retrieval
-        dynamic_retrieval_config=grounding.DynamicRetrievalConfig(
-            dynamic_threshold=0.7,
-        )
-    )
-)
+llm_with_search = chat_llm.bind_tools([{"Google Search": {}}])
 
 @tool
 async def web_search(message: str) -> str:
@@ -48,17 +42,13 @@ async def web_search(message: str) -> str:
     logging.info('Endpoint generico acessado')
     try:
         # Gera a resposta usando o modelo
-        response = model_generico.generate_content(
-            message,  # Usa a mensagem do usuário como prompt
-            tools=[tool_search],
-            generation_config=GenerationConfig(
-                temperature=0.1,
-                max_output_tokens=8192,
-            ),
-        )
+        response = await llm_with_search.ainvoke([
+            SystemMessage(content=system_instruction_generico),
+            HumanMessage(content=message)
+        ])
         
         # Retorna o texto da resposta
-        return response.text
+        return response.content
 
     except Exception as e:
        logging.error(f"Erro ao fazer a requisição generico: {e}")
