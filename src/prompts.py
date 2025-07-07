@@ -21,7 +21,7 @@ modeloCabecalhoPlanoEnsino="""
 
 **Unidade:** [Escola Senai]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 modeloItem2CapacidadesSA="""
 ## Capacidades a serem desenvolvidas:
@@ -74,7 +74,7 @@ modeloItem3ConhecimentosSA="""
     - Escolher somente os conhecimentos que são necessários para o desenvolvimento da situação de aprendizagem, de acordo com as capacidades escolhidas no item 2, se atentando para não escolher todos os conhecimentos da unidade curricular em questão.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 
 modeloItem4EstrategiaSA_Base="""
@@ -145,7 +145,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 
 modeloPlanoDeEnsinoEC="""
@@ -217,7 +217,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 
 modeloPlanoDeEnsinoP="""
@@ -270,7 +270,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 
 modeloPlanoDeEnsinoPA="""
@@ -349,7 +349,7 @@ NÃO INCLUIR ESSA SESSÃO NO PLANO DE ENSINO, APENAS PARA USO DO PROMPT
     - Esta obeservação é apenas para o prompt, não deve conter no plano de ensino.
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 
 modeloAvaliacaoAtual="""
@@ -359,8 +359,7 @@ modeloAvaliacaoAtual="""
 ### Critérios Dicotômicos
     
     Tabela contendo como título "### Instrumento de Registro" 
-        Nome do aluno:_____________ \n
-        Turma:_____________\n
+        Nome do aluno:______________________________________________    Turma:_______________________\n
     - Colunas:
         Capacidades básicas/técnicas e socioemocionais
             [
@@ -392,9 +391,31 @@ modeloAvaliacaoAtual="""
 | [capacidade] | [Critério Dicotômico] |               |           |
 |              | [Critério Dicotômico] |               |           |
 
+
+### Critérios Graduais
+
+    Tabela contendo como título "### Instrumento de Registro"
+        Nome do aluno:______________________________________________Turma:_______________________\n
+    - Colunas:
+        Capacidades básicas/técnicas e socioemocionais
+            [
+                Colocar uma capacidades basicas ou técnicas e socioemocionais selecionadas para a situação de aprendizagem por linha. Devem ser as mesmas selecionadas no item 5.1 Critérios Dicotômicos.
+            ]
+        Nível 1: Descreve o desempenho mínimo esperado do aluno, com características de falta de conhecimento ou domínio.
+        Nível 2: Descreve o desempenho do aluno que demonstra alguma compreensão da capacidade, mas ainda precisa de auxílio.
+        Nível 3: Descreve o desempenho do aluno que demonstra domínio da capacidade, realizando a tarefa com autonomia e segurança.
+        Nível 4: Descreve o desempenho do aluno que demonstra excelência na capacidade, com iniciativa, criatividade e domínio aprofundado.
+        
+    Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
+        
+| **Capacidades**   | **Nível 1**    | **Nível 2**    | **Nível 3**    | **Nível 4**    |
+|:-----------------:|:--------------:|:--------------:|:--------------:|:--------------:|
+| [capacidade]      |critério nível 1|critério nível 2|critério nível 3|critério nível 4|
+| [capacidade]      |critério nível 1|critério nível 2|critério nível 3|critério nível 4|
+
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
 modeloPlanoAula="""
 
@@ -437,7 +458,7 @@ modeloPlanoAula="""
 
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 
 ## Perguntas Mediadoras:
 [
@@ -491,8 +512,15 @@ modeloPlanoAulaAtual="""
     
     Não utilizar a marcação <br> para quebra de linha
     Obedecer rigorosamente a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
+    
+| Horas/Aulas e Data | Capacidades | Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação | Instrumento de Avaliação | Referências |
+|:---|:---|:---|:---|:---|:---|:---|:---|
+| XX horas - DD/MM/AAAA |[capacidade]|   |   |   |[critério de avaliação] |   |   |
+|                       |            |   |   |   |[critério de avaliação] |   |   |
+| XX horas - DD/MM/AAAA |[capacidade]|   |   |   |[critério de avaliação] |   |   |
+|                       |            |   |   |   |[critério de avaliação] |   |   |
  
 ]
 
-Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente\n\n
+Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
 """
