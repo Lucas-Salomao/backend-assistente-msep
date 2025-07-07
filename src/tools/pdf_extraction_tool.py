@@ -3,21 +3,19 @@ import json
 import os
 from typing import Optional, List, Dict, Any # Adicionado Dict, Any
 from langchain_core.tools import tool
-import google.generativeai as genai # Ou sua forma preferida de acessar o LLM
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage, HumanMessage
 import asyncio # Para chamadas concorrentes ao LLM para capacidades
+
+instrucao_sistema = "Você é um assistente eficiente em extrair informações específicas de textos. Responda apenas com a informação solicitada, de forma concisa e nada mais."
 
 logger = logging.getLogger(__name__)
 
-# Função get_extraction_llm (como definida antes)
-async def get_extraction_llm(model_name: str = os.getenv("MODEL_ID"), temperature: float = 0.1):
-    generation_config_dict = {
-        "temperature": temperature, "top_p": 0.95, "max_output_tokens": 8192, # Aumentado para flash
-        "response_mime_type": "text/plain",
-    }
-    return genai.GenerativeModel(
-        model_name=model_name,
-        generation_config=generation_config_dict,
-        system_instruction="""Você é um assistente eficiente em extrair informações específicas de textos. Responda apenas com a informação solicitada, de forma concisa e nada mais.""",
+extraction_llm = ChatGoogleGenerativeAI(
+        model=os.getenv("MODEL_ID"),
+        temperature=0.1,
+        top_p=0.95,
+        max_output_tokens=8192,
     )
     
 def sanitize_text(text: str) -> str:
@@ -47,7 +45,7 @@ def sanitize_text(text: str) -> str:
 
     return text
 
-async def _extract_capabilities_for_single_uc(llm: genai.GenerativeModel, markdown_content: str, uc_name: str) -> Dict[str, List[str]]:
+async def _extract_capabilities_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> Dict[str, List[str]]:
     """Função auxiliar para extrair capacidades de uma única UC."""
     logger.debug(f"Extraindo capacidades para UC: {uc_name}")
     cap_details = {
@@ -69,9 +67,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Capacidades técnicas:"""
 
-        response_tec = await llm.generate_content_async(prompt_tec)
-        if response_tec and response_tec.text:
-            raw_capabilities = [sanitize_text(cap.strip()) for cap in response_tec.text.splitlines() if cap.strip()]
+        response_tec = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_tec)
+        ])
+        if response_tec and response_tec.content:
+            raw_capabilities = [sanitize_text(cap.strip()) for cap in response_tec.content.splitlines() if cap.strip()]
             cap_details["CapacidadesTecnicas_list"] = [cap for cap in raw_capabilities if cap]
 
         # Prompt para capacidades socioemocionais
@@ -87,9 +88,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Capacidades socioemocionais:"""
 
-        response_soc = await llm.generate_content_async(prompt_soc)
-        if response_soc and response_soc.text:
-            raw_capabilities = [sanitize_text(cap.strip()) for cap in response_soc.text.splitlines() if cap.strip()]
+        response_soc = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_soc)
+        ])
+        if response_soc and response_soc.content:
+            raw_capabilities = [sanitize_text(cap.strip()) for cap in response_soc.content.splitlines() if cap.strip()]
             cap_details["CapacidadesSocioemocionais_list"] = [cap for cap in raw_capabilities if cap]
             
         logger.debug(f"Capacidades extraídas para {uc_name}: {len(cap_details['CapacidadesTecnicas_list'])} técnicas, {len(cap_details['CapacidadesSocioemocionais_list'])} socioemocionais")
@@ -100,11 +104,13 @@ Capacidades socioemocionais:"""
     
     return cap_details
 
-async def _extract_knowledge_for_single_uc(llm: genai.GenerativeModel, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_knowledge_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair conhecimentos de uma única UC."""
     logger.debug(f"Extraindo conhecimentos para UC: {uc_name}")
     knowledge_list: List[str] = []
 
+    
+    
     try:
         prompt_knowledge = f"""{markdown_content}
 
@@ -117,9 +123,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Conhecimentos:"""
 
-        response_knowledge = await llm.generate_content_async(prompt_knowledge)
-        if response_knowledge and response_knowledge.text:
-            raw_knowledge = [sanitize_text(k.strip()) for k in response_knowledge.text.splitlines() if k.strip()]
+        response_knowledge= await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_knowledge)
+        ])
+        if response_knowledge and response_knowledge.content:
+            raw_knowledge = [sanitize_text(k.strip()) for k in response_knowledge.content.splitlines() if k.strip()]
             knowledge_list = [k for k in raw_knowledge if k] # Remove linhas vazias após sanitização
 
         logger.debug(f"Conhecimentos extraídos para {uc_name}: {len(knowledge_list)} itens.")
@@ -130,7 +139,7 @@ Conhecimentos:"""
 
     return knowledge_list
 
-async def _extract_objective_for_single_uc(llm: genai.GenerativeModel, markdown_content: str, uc_name: str) -> Optional[str]:
+async def _extract_objective_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> Optional[str]:
     """Função auxiliar para extrair o objetivo de uma única UC."""
     logger.debug(f"Extraindo objetivo para UC: {uc_name}")
     objective: Optional[str] = None
@@ -145,9 +154,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Objetivo da Unidade Curricular '{uc_name}':"""
 
-        response_objective = await llm.generate_content_async(prompt_objective)
-        if response_objective and response_objective.text:
-            objective_text = sanitize_text(response_objective.text.strip())
+        response_objective= await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_objective)
+        ])
+        if response_objective and response_objective.content:
+            objective_text = sanitize_text(response_objective.content.strip())
             if objective_text: # Garante que não seja uma string vazia após sanitização
                 objective = objective_text
 
@@ -159,7 +171,7 @@ Objetivo da Unidade Curricular '{uc_name}':"""
 
     return objective
 
-async def _extract_references_for_single_uc(llm: genai.GenerativeModel, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_references_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair referências bibliográficas de uma única UC."""
     logger.debug(f"Extraindo referências bibliográficas para UC: {uc_name}")
     references_list: List[str] = []
@@ -175,9 +187,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Referências Bibliográficas da Unidade Curricular '{uc_name}':"""
 
-        response_references = await llm.generate_content_async(prompt_references)
-        if response_references and response_references.text:
-            raw_references = [sanitize_text(ref.strip()) for ref in response_references.text.splitlines() if ref.strip()]
+        response_references = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_references)
+        ])
+        if response_references and response_references.content:
+            raw_references = [sanitize_text(ref.strip()) for ref in response_references.content.splitlines() if ref.strip()]
             references_list = [ref for ref in raw_references if ref] # Remove linhas vazias após sanitização
 
         logger.debug(f"Referências bibliográficas extraídas para {uc_name}: {len(references_list)} itens.")
@@ -188,7 +203,7 @@ Referências Bibliográficas da Unidade Curricular '{uc_name}':"""
 
     return references_list
 
-async def _extract_workload_for_single_uc(llm: genai.GenerativeModel, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_workload_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair a carga horária total de uma única UC."""
     logger.debug(f"Extraindo carga horária para UC: {uc_name}")
     workload: str = ""
@@ -204,9 +219,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Carga horária total '{uc_name}':"""
 
-        response_workload = await llm.generate_content_async(prompt_workload)
+        response_workload = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_workload)
+        ])
         if response_workload:
-            workload = sanitize_text(response_workload.text.strip())
+            workload = sanitize_text(response_workload.content.strip())
 
         logger.debug(f"Carga horária total extraídas para {uc_name}: {workload} horas.")
 
@@ -215,7 +233,7 @@ Carga horária total '{uc_name}':"""
 
     return workload
 
-async def _extract_module_for_single_uc(llm: genai.GenerativeModel, markdown_content: str, uc_name: str) -> List[str]:
+async def _extract_module_for_single_uc(llm: ChatGoogleGenerativeAI, markdown_content: str, uc_name: str) -> List[str]:
     """Função auxiliar para extrair o tipo de módulo de uma única UC."""
     logger.debug(f"Extraindo o tipo de módulo: {uc_name}")
     module: str = ""
@@ -231,9 +249,12 @@ INSTRUÇÕES IMPORTANTES:
 
 Módulo da UC '{uc_name}':"""
 
-        response_module = await llm.generate_content_async(prompt_module)
-        if response_module and response_module.text:
-            module = sanitize_text(response_module.text.strip())
+        response_module= await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_module)
+        ])
+        if response_module and response_module.content:
+            module = sanitize_text(response_module.content.strip())
 
         logger.debug(f"Tipo de módulo extraído para {uc_name}: {module}.")
 
@@ -261,7 +282,7 @@ async def extract_full_plan_details(markdown_content: str) -> str:
     }
 
     try:
-        llm = await get_extraction_llm()
+        llm = extraction_llm
 
         # Etapa A: Extrair nome do curso (como antes)
         prompt_nome_curso = f"""{markdown_content}
@@ -271,9 +292,12 @@ INSTRUÇÕES:
 - Retorne somente o nome do curso.
 - Não inclua explicações ou texto adicional.
 Nome do curso:"""
-        response_nome_curso = await llm.generate_content_async(prompt_nome_curso)
-        if response_nome_curso and response_nome_curso.text:
-            results["nomeCurso"] = sanitize_text(response_nome_curso.text.strip())
+        response_nome_curso = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_nome_curso)
+        ])
+        if response_nome_curso and response_nome_curso.content:
+            results["nomeCurso"] = sanitize_text(response_nome_curso.content.strip())
             logger.info(f"Nome do curso extraído: {results['nomeCurso']}")
 
         # Etapa B: Extrair a modalidade de ensino
@@ -284,9 +308,12 @@ INSTRUÇÕES:
 - Retorne somente a modalidade de ensino.
 - Não inclua explicações ou texto adicional.
 Modalidade de Ensino:"""
-        response_modalidade = await llm.generate_content_async(prompt_modalidade)
-        if response_modalidade and response_modalidade.text:
-            results["modalidade"] = sanitize_text(response_modalidade.text.strip())
+        response_modalidade = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_modalidade)
+        ])
+        if response_modalidade and response_modalidade.content:
+            results["modalidade"] = sanitize_text(response_modalidade.content.strip())
             logger.info(f"Modalidade de Ensino extraído: {results['modalidade']}")
         
         # Etapa C: Extrair lista de UCs (como antes)
@@ -298,10 +325,13 @@ INSTRUÇÕES IMPORTANTES:
 - Não use marcadores, números ou símbolos no início de cada nome de UC.
 - Não inclua frases introdutórias como "As UCs são:".
 Lista de Unidades Curriculares:"""
-        response_ucs_list = await llm.generate_content_async(prompt_ucs_list)
+        response_ucs_list = await llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_ucs_list)
+        ])
         ucs_nomes = []
-        if response_ucs_list and response_ucs_list.text:
-            raw_ucs = [sanitize_text(uc.strip()) for uc in response_ucs_list.text.splitlines() if uc.strip()]
+        if response_ucs_list and response_ucs_list.content:
+            raw_ucs = [sanitize_text(uc.strip()) for uc in response_ucs_list.content.splitlines() if uc.strip()]
             ucs_nomes = [uc for uc in raw_ucs if uc] # Filtra strings vazias
             logger.info(f"UCs extraídas: {len(ucs_nomes)} unidades encontradas: {ucs_nomes}")
 

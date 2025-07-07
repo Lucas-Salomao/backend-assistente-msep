@@ -1,7 +1,7 @@
 import logging
 import os
-import google.generativeai as genai # Ou sua forma preferida de acessar o LLM
-from google.generativeai.types import HarmCategory, HarmBlockThreshold # Para safety settings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage, HumanMessage
 
 # Configuração do logging
 logging.basicConfig(
@@ -14,6 +14,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+json_converter_llm = ChatGoogleGenerativeAI(
+    model=os.getenv("MODEL_ID"),
+    temperature=0.1, # Temperatura baixa para respostas previsíveis
+    top_p=0.95,
+    max_output_tokens=8192
+)
+
 async def cleanup_temp_file(file_path: str):
     """Remove o arquivo temporário após o envio."""
     try:
@@ -25,24 +32,17 @@ async def cleanup_temp_file(file_path: str):
         
 async def convert_markdown_to_json(markdown_str: str):
     """Converte o plano de ensino em Markdown para um dicionário JSON."""
-    generation_config_dict = {
-        "temperature": 0.1, "top_p": 0.95, "max_output_tokens": 8192, # Max tokens para PRO
-        "response_mime_type": "text/plain",
-    }
-    # Configurações de segurança - ajuste conforme necessário
-    safety_settings = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    }
-    llm = genai.GenerativeModel(
-        model_name=os.getenv('MODEL_ID'),
-        generation_config=generation_config_dict,
-        system_instruction="Você é um conversor de markdown para JSON de alta performance. Interprete o arquivo e gere apenas o JSON de saída. Não inclua a notação ````json```. Quero um formato puramente string.",
-        safety_settings=safety_settings
-    )
-    prompt_convert = f"Converta para uma string JSON o markdown abaixo: {markdown_str}"
-    json_str=await llm.generate_content_async(prompt_convert)
+    instrucao_sistema = "Você é um conversor de markdown para JSON de alta performance. Interprete o arquivo e gere apenas o JSON de saída. Não inclua a notação ```json```. Quero um formato puramente texto."
     
-    return json_str.text
+    prompt_usuario = f"Converta para uma string JSON o markdown abaixo: {markdown_str}"
+
+    try:
+        response = await json_converter_llm.ainvoke([
+            SystemMessage(content=instrucao_sistema),
+            HumanMessage(content=prompt_usuario)
+        ])
+        return response.content
+    except Exception as e:
+        logger.error(f"Erro ao converter markdown para JSON: {e}")
+        # Retorna um JSON de erro em caso de falha
+        return '{"error": "Falha ao converter o conteúdo para JSON."}'
