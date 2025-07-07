@@ -71,7 +71,7 @@ modeloItem3ConhecimentosSA="""
     - Listar os conhecimentos, precedidos da numeração assim como aparecem no plano de curso.
     - Cada conhecimento deve ficar em uma linha separada.
     - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
-    - Escolher somente os conhecimentos que são necessários para o desenvolvimento da situação de aprendizagem, de acordo com as capacidades escolhidas no item 2, se atentando para não escolher todos os conhecimentos da unidade curricular em questão.
+    - Escolher somente os conhecimentos que são necessários para o desenvolvimento da situação de aprendizagem, de acordo com as capacidades escolhidas no item Capacidades a serem desenvolvidas, se atentando para não escolher todos os conhecimentos da unidade curricular em questão.
 ]
 
 Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
@@ -98,7 +98,7 @@ Incluir ao final deste bloco: ⚠️ Este Plano de Ensino foi gerado por IA e de
 """
 modeloPlanoDeEnsinoSP="""
 [
-    Propor uma Situação de Aprendizagem de acordo com as capacidades escolhidas no item 2 e com os conhecimentos escolhidos no item 3.
+    Propor uma Situação de Aprendizagem de acordo com as capacidades escolhidas no item Capacidades a serem desenvolvidas e com os conhecimentos escolhidos no item anterior.
     Esse texto não deve conter no plano é apenas a referência de como elaborar a situação de aprendizagem.
 ]
 
@@ -391,7 +391,6 @@ modeloAvaliacaoAtual="""
 | [capacidade] | [Critério Dicotômico] |               |           |
 |              | [Critério Dicotômico] |               |           |
 
-
 ### Critérios Graduais
 
     Tabela contendo como título "### Instrumento de Registro"
@@ -399,7 +398,7 @@ modeloAvaliacaoAtual="""
     - Colunas:
         Capacidades básicas/técnicas e socioemocionais
             [
-                Colocar uma capacidades basicas ou técnicas e socioemocionais selecionadas para a situação de aprendizagem por linha. Devem ser as mesmas selecionadas no item 5.1 Critérios Dicotômicos.
+                Colocar uma capacidades basicas ou técnicas e socioemocionais selecionadas para a situação de aprendizagem por linha. Devem ser as mesmas selecionadas no item Critérios Dicotômicos.
             ]
         Nível 1: Descreve o desempenho mínimo esperado do aluno, com características de falta de conhecimento ou domínio.
         Nível 2: Descreve o desempenho do aluno que demonstra alguma compreensão da capacidade, mas ainda precisa de auxílio.
@@ -438,13 +437,13 @@ modeloPlanoAula="""
         -Recursos e ambientes pedagógicos:
             [Computador, internet, notion, Microsoft Teams, Microsoft Learn, Plataforma de Gamificação Quizziz, Forms, Mentimeter, Kahoot, entre outros.]
         -Critérios de Avaliação:
-            [ Listar os critérios de avaliação, críticos e desejáveis, elaborados anteriormente no item 5 necessários para a avaliação da situação de aprendizagem proposta.]
+            [ Listar os critérios de avaliação, críticos e desejáveis, elaborados anteriormente necessários para a avaliação da situação de aprendizagem proposta.]
         -Instrumento de Avaliação:
             [ Definir instrumentos de avaliação de forma a evidenciar os critérios de avaliação, em função das estratégias de ensino.]
         -Referências bibliográficas de acordo com o plano de curso:
             [livros, apostilas, sites, blogs, artigos, etc]
     
-    O Plano de Aula deve contemplar toda a carga horária e número de aulas previstas para o desenvolvimento da Situação de Aprendizagem. O plano deve conter exatamente a quantidade de carga horária e aulas previstas no Item 1. Informações do Curso. 
+    O Plano de Aula deve contemplar toda a carga horária e número de aulas previstas para o desenvolvimento da Situação de Aprendizagem. O plano deve conter exatamente a quantidade de carga horária e aulas previstas no Item Cabeçalho. Informações do Curso. 
     
     Não utilizar a marcação <br> para quebra de linha
     Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
@@ -492,7 +491,10 @@ modeloPlanoAulaAtual="""
         -Recursos e ambientes pedagógicos:
             [Computador, internet, notion, Microsoft Teams, Microsoft Learn, Plataforma de Gamificação Quizziz, Forms, Mentimeter, Kahoot, entre outros.]
         -Critérios de Avaliação:
-            [ Listar os critérios de avaliação, elaborados anteriormente no item 5 necessários para a avaliação da situação de aprendizagem proposta.]
+            [ 
+                Listar os critérios de avaliação, elaborados anteriormente no item Critérios de Avaliação necessários para a avaliação da situação de aprendizagem proposta.
+                Para cada critério de avaliação que for selecionado para ser trabalhado na aula, deve ser indicado todos os critérios de avaliação que foram definidos anteriormente.
+            ]
         -Instrumentos de Avaliação:
             [ 
                 O instrumento de avaliação é a ferramenta utilizada para medir e analisar o desempenho dos alunos em relação aos critérios de avaliação definidos.
@@ -508,18 +510,27 @@ modeloPlanoAulaAtual="""
             [incluir referências de acordo com as indicadas na Unidade Curricular e também indicar referências externas, que sejam pertinentes ao plano de aula e a unidade curricular.]
             [toda aula deve ter pelo menos uma referência bibliográfica.]
     
-    O Plano de Aula deve contemplar toda a carga horária e número de aulas previstas para o desenvolvimento da Situação de Aprendizagem. O plano deve conter exatamente a quantidade de carga horária e aulas previstas no Item 1. Informações do Curso. 
+    O Plano de Aula deve contemplar toda a carga horária e número de aulas previstas para o desenvolvimento da Situação de Aprendizagem. O plano deve conter exatamente a quantidade de carga horária e aulas previstas no Item Cabeçalho. Informações do Curso. 
     
     Não utilizar a marcação <br> para quebra de linha
     Obedecer rigorosamente a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
     
 | Horas/Aulas e Data | Capacidades | Conhecimentos | Estratégias | Recursos e ambientes pedagógicos | Critérios de Avaliação | Instrumento de Avaliação | Referências |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| XX horas - DD/MM/AAAA |[capacidade]|   |   |   |[critério de avaliação] |   |   |
-|                       |            |   |   |   |[critério de avaliação] |   |   |
-| XX horas - DD/MM/AAAA |[capacidade]|   |   |   |[critério de avaliação] |   |   |
-|                       |            |   |   |   |[critério de avaliação] |   |   |
+| XX horas - DD/MM/AAAA |[capacidade]|   |   |   |[critérios de avaliação] |   |   |
+| XX horas - DD/MM/AAAA |[capacidade]|   |   |   |[critérios de avaliação] |   |   |
  
+]
+
+## Perguntas Mediadoras:
+[
+    - Elabore 5 pergundas mediadoras de acordo com a situação de aprendizagem propostas.
+    - Considere as seguintes diretrizes para a elaboração de perguntas mediadoras, usando como base a Metodologia SENAI de Educação Profissional:
+        Contextualização: As perguntas devem ser relacionadas ao contexto real de trabalho da ocupação, fazendo ligações com o que o aluno irá vivenciar no seu dia a dia profissional.
+        Desafio: As perguntas devem desafiar o aluno a pensar além do básico, a buscar soluções criativas, a analisar diferentes perspectivas e a conectar os conhecimentos aprendidos com novas situações.
+        Integração: As perguntas devem promover a integração entre teoria e prática, incentivando o aluno a aplicar o conhecimento em situações concretas.
+        Abordagem: As perguntas devem ter uma abordagem que estimule o diálogo, a participação ativa e a colaboração entre os alunos.
+        Níveis Cognitivos: As perguntas devem ser formuladas de forma a atingir diferentes níveis cognitivos da taxonomia de Bloom (lembrar, entender, aplicar, analisar, avaliar e criar).
 ]
 
 Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
