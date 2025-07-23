@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from psycopg import AsyncConnection  # Adiciona esta importação
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from .agent import run_agent, get_checkpoint_connection, setup_tables, setup_checkpointer
-from .document_store import setup_document_storage, store_markdown_document, store_plan_document
+from .document_store import setup_document_storage, store_markdown_document, store_plan_document, get_plan_document
 from .pdf_processor import convert_pdf_to_markdown
 import json # Para carregar strings JSON
 import uuid # Para gerar IDs
@@ -22,7 +22,7 @@ from .models.models import (
     FullPlanDetailsResponse,
     PlanGenerationBodyWithStoredId, PlanGenerationResponse,
     SituacaoAprendizagemInput,
-    GetPlansRequest, GetPlansResponse,
+    GetPlansRequest, GetPlansResponse, GetPlanResponse, GetSinglePlanRequest
 )
 from src.utils.utils import convert_markdown_to_json
 
@@ -457,6 +457,62 @@ async def get_plans(body: GetPlansRequest):
     except Exception as e:
         logger.error(f"Erro ao recuperar planos: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/get_single_plan", response_model=GetPlanResponse) 
+async def get_single_plan(body: GetSinglePlanRequest):
+    """
+    Recupera os detalhes e o conteúdo de um plano de ensino específico pelo seu ID.
+    """
+    plan_id = body.plan_id
+    logger.info(f"Endpoint /get_single_plan solicitado para o ID: {plan_id}.")
+    
+    try:
+        # Primeiro, busca os metadados do plano no banco de dados
+        async with await get_checkpoint_connection() as conn: # Reutilizando a função de conexão
+            async with conn.cursor() as cur:
+                query = """
+                SELECT id, user_id, thread_id, course_plan_id, created_at, gcs_blob_name 
+                FROM user_plans WHERE id = %s
+                """
+                await cur.execute(query, (uuid.UUID(plan_id),))
+                record = await cur.fetchone()
+
+        if not record:
+            logger.warning(f"Plano com ID: {plan_id} não encontrado no banco de dados.")
+            raise HTTPException(status_code=404, detail=f"Plano com ID {plan_id} não encontrado.")
+
+        # Desempacota os metadados
+        db_id, user_id, thread_id, course_plan_id, created_at, gcs_blob_name = record
+        
+        # Agora, busca o conteúdo do plano no GCS
+        plan_content_str = await get_plan_document(plan_id)
+
+        if plan_content_str is None:
+            # Isso seria estranho se o registro do DB existe, mas pode acontecer
+            logger.error(f"Registro do plano {plan_id} encontrado no DB, mas o conteúdo não foi encontrado no GCS em {gcs_blob_name}.")
+            raise HTTPException(status_code=404, detail=f"Conteúdo do plano com ID {plan_id} não encontrado no armazenamento.")
+
+        # Converte a string JSON do GCS em um objeto Python (dicionário)
+        plan_content_json = json.loads(plan_content_str)
+
+        # Monta a resposta final usando o modelo Pydantic
+        return GetPlanResponse(
+            plan_id=str(db_id),
+            user_id=user_id,
+            thread_id=thread_id,
+            course_plan_id=course_plan_id,
+            created_at=str(created_at),
+            plan_content=plan_content_json
+        )
+
+    except ValueError: # Caso o plan_id não seja um UUID válido
+        raise HTTPException(status_code=400, detail="O ID do plano fornecido é inválido.")
+    except HTTPException as he:
+        # Re-levanta a exceção para que o FastAPI a manipule
+        raise he
+    except Exception as e:
+        logger.error(f"Erro inesperado ao buscar o plano {plan_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno ao buscar o plano de ensino.")
  
 if __name__ == "__main__":
     import uvicorn

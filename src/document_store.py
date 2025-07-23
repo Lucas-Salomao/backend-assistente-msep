@@ -176,3 +176,35 @@ async def setup_document_storage():
         raise EnvironmentError("GCS_MARKDOWN_BUCKET_NAME não está configurado.")
     else:
         logger.info(f"Armazenamento GCS configurado para usar o bucket: {GCS_MARKDOWN_BUCKET_NAME}")
+        
+async def get_plan_document(plan_id: str) -> Optional[str]:
+    """Recupera o conteúdo JSON de um plano específico do GCS usando o seu ID."""
+    try:
+        # Valida se o ID tem o formato de um UUID
+        plan_uuid = uuid.UUID(plan_id)
+    except ValueError:
+        logger.error(f"ID de plano inválido fornecido para recuperação: {plan_id}")
+        return None
+
+    # Conecta ao DB para encontrar o caminho do arquivo no GCS
+    async with await get_db_connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT gcs_blob_name FROM user_plans WHERE id = %s",
+                (plan_uuid,)
+            )
+            record = await cur.fetchone()
+
+    if not record:
+        logger.warning(f"Nenhum plano encontrado com ID: {plan_id}")
+        return None
+
+    gcs_blob_name = record[0]
+    if not gcs_blob_name:
+        logger.error(f"Registro do DB para o plano ID: {plan_id} não possui um caminho GCS (gcs_blob_name).")
+        return None
+        
+    logger.info(f"Plano (ID: {plan_id}) será recuperado do GCS path: {gcs_blob_name}.")
+    
+    # Usa a função auxiliar existente para baixar o conteúdo do GCS
+    return await _download_from_gcs(GCS_PLANS_BUCKET_NAME, gcs_blob_name)

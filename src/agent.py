@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated, Optional, List, Dict, Any, cast
-from langgraph.prebuilt import ToolExecutor
+from langgraph.prebuilt import ToolNode
 from src.tools import tools
 import vertexai
 from langchain_google_vertexai import ChatVertexAI
@@ -212,7 +212,7 @@ class AgentState(TypedDict):
     plan_extracted_data: Optional[Dict[str, Any]] # Usado pela ferramenta de extração, não diretamente pela de geração
     
 tool_map = {tool.name if hasattr(tool, 'name') else tool.__name__: tool for tool in tools}
-tool_executor = ToolExecutor(tools)
+tool_executor = ToolNode(tools)
 
 # Mapeamento de argumentos para cada ferramenta
 TOOL_ARGUMENTS = {

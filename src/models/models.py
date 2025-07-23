@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 class RequestBody(BaseModel):
@@ -111,3 +111,14 @@ class GetPlansRequest(BaseModel):
 class GetPlansResponse(BaseModel):
     user_id: str
     plan_ids: List[str]
+    
+class GetPlanResponse(BaseModel):
+    plan_id: str
+    user_id: str
+    thread_id: str
+    course_plan_id: str
+    created_at: str
+    plan_content: Dict[str, Any]
+
+class GetSinglePlanRequest(BaseModel):
+    plan_id: str = Field(..., description="ID do plano de ensino a ser recuperado.")
