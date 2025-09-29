@@ -178,10 +178,12 @@ async def get_threads_with_titles(body: GetThreadsWithTitlesRequest):
                 thread_id_exclude_pattern = "op_extract_full_plan_details%"
                 
                 query = """
-                SELECT thread_id, (metadata->'writes'->'generate_title'->>'title') AS title
+                SELECT thread_id, (checkpoint->'channel_values'->>'title') AS title
                 FROM (
-                    SELECT thread_id, metadata,
-                           ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY (metadata->>'step')::int DESC) AS rn
+                    SELECT 
+                        thread_id, 
+                        checkpoint,
+                        ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY (metadata->>'step')::int DESC) AS rn
                     FROM checkpoints
                     WHERE (metadata->>'user_id') = %s
                 ) t

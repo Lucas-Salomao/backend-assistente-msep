@@ -72,6 +72,17 @@ modeloItem3ConhecimentosSA="""
     - Cada conhecimento deve ficar em uma linha separada.
     - É muito importante que a lista não tenha todos os conhecimentos da unidade curricular, pois outras situações de aprendizagem podem ser criadas com os conhecimentos não selecionados.
     - Escolher somente os conhecimentos que são necessários para o desenvolvimento da situação de aprendizagem, de acordo com as capacidades escolhidas no item Capacidades a serem desenvolvidas, se atentando para não escolher todos os conhecimentos da unidade curricular em questão.
+
+    Exemplo:
+    1. Conhecimento 1
+        1.1 Subtópico 1
+        1.2 Subtópico 2
+    2. Conhecimento 2
+        2.1 Subtópico 1
+        2.2 Subtópico 2
+    3. Conhecimento 3
+        3.1 Subtópico 1
+        3.2 Subtópico 2
 ]
 
 Incluir ao final deste bloco:⚠️ Este Plano de Ensino foi gerado por IA e deve ser avaliado por um docente.\n\n
@@ -380,7 +391,7 @@ modeloAvaliacaoAtual="""
         S=Atingiu/N=Não Atingiu [não preencher na tabela]
     
     Não utilizar a marcação <br> para quebra de linha
-    Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
+    Obedecer a seguinte formatação da tabela em markdown e adequar seguindo o modelo para a quantidade de capacidades:
     
 | Capacidades  | Critérios de Avaliação| Autoavaliação | Avaliação |
 | -------------| --------------------- | ------------- | --------- |
@@ -405,7 +416,7 @@ modeloAvaliacaoAtual="""
         Nível 3: Descreve o desempenho do aluno que demonstra domínio da capacidade, realizando a tarefa com autonomia e segurança.
         Nível 4: Descreve o desempenho do aluno que demonstra excelência na capacidade, com iniciativa, criatividade e domínio aprofundado.
         
-    Obedecer a seguinte formatação da tabela e adequar seguindo o modelo para a quantidade de capacidades:
+    Obedecer a seguinte formatação da tabela em markdown e adequar seguindo o modelo para a quantidade de capacidades:
         
 | **Capacidades**   | **Nível 1**    | **Nível 2**    | **Nível 3**    | **Nível 4**    |
 |:-----------------:|:--------------:|:--------------:|:--------------:|:--------------:|
